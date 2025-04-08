@@ -1,0 +1,41 @@
+.tableknife_TABLE {
+	width:100%;
+	background-color:white;
+	border-spacing: 1px 0;	
+}
+
+.tableknife_TABLE A {
+
+  /* These are technically the same, but use both */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+
+ 	 -ms-word-break: break-all;
+  /* This is the dangerous one in WebKit, as it breaks things wherever */
+  word-break: break-all;
+  /* Instead use this non-standard one: */
+  word-break: break-word;
+
+  /* Adds a hyphen where the word breaks, if supported (No Blink) */
+  -ms-hyphens: auto;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphens: auto;	
+}
+
+.tableknife_TABLE TD[state=hide] {
+    display:none;
+}
+
+.tableknife_TABLE .hoveri {
+	position:relative;
+}
+.tableknife_TABLE .hoveri::hover {
+	outline:1px solid blue;
+}
+.tableknife_TABLE .hoveri_DIV {
+	position:absolute;
+	background-color:lightblue;
+	outline:1px solid green;
+	z-index:100;
+}
