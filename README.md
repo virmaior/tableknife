@@ -4,8 +4,8 @@ Table Knife is a PHP/JQuery tool for making HTML tables that can be style, downl
 
 On the Jquery side, tableknife takes a `<TABLE>` element with `class=tableknife_TABLE` and provides a few interesting functions.
 
-(1) It allows exporting of the TABLE to TSV, Google Sheets-friendly paste, or XLS friendly paste
-(2) It allows hovering using the class "hoveri"
+1. It allows exporting of the TABLE to TSV, Google Sheets-friendly paste, or XLS friendly past
+2. It allows hovering using the class "hoveri"
 
 On the PHP side, tableknife allows the formatting of TABLES based on their incoming data. Each field is rendered via an `rfield` object using the `process(array $row):string` function. The $row is generally a mysqli_fetch_assoc but it can take any sort of array-like data.
 
@@ -47,4 +47,6 @@ require_once('tableknife.php');
 
 ?>
 ```
+
+In general, extend the rfield_db class to do further manipulation to match what you need.
 
