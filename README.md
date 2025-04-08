@@ -32,15 +32,14 @@ to create a new tableknife in php:
 <?php
 require_once('tableknife.php');
 	$gradable_data = new \tableknife\report_web(
-				array(	'Class Name'		=> new \tableknife\rfield_db('class_name'), 
-						''Class Name'		=> new \tableknife\rfield_db('gradable_name'), 
-						'# of Entries'	 	=> new \tableknife\rfield_num('gradable_count'),
-						'Edit'				=> new \tableknife\rfield_link('g_id')
-				)
-		);
+		array(	'Class Name'		=> new \tableknife\rfield_db('class_name'), 
+			'Gradable Name'		=> new \tableknife\rfield_db('gradable_name'), 
+			'# of Entries'	 	=> new \tableknife\rfield_num('gradable_count'),
+			'Edit'			=> new \tableknife\rfield_link('g_id')
+		));
 		
 		$data_rows = mysqli_query('SELECT 
-				 class_name, ,q.gradable_name,   gradable_count
+				 class_name, , gradable_name,   gradable_count
 				FROM gradables  ');
 			
 		$gradable_data->fast_show($data_rows,true,true);
