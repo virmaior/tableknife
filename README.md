@@ -49,3 +49,38 @@ require_once('tableknife.php');
 
 In general, extend the rfield_db class to do further manipulation to match what you need.
 
+# Hover Items
+
+Items can also be hovered using a hook to create the hover code.
+(1) In the cell add `class="hoveri" htype="pday" `
+(2) In the JavaScript, add the hover handler:
+```
+$(document).ready(function() {
+	gkpt.h['att'] = new att_help();
+	gkpt.h['att'].first_init();
+	
+    var checkInterval = setInterval(function() {
+        if (typeof tableknife_manager !== 'undefined') {
+            clearInterval(checkInterval);
+         		tableknife_manager.hovers['pday'] = function(me,ptd,h_id) {
+					
+				const student_id = $(ptd).parent().attr('student_id');
+				if (student_id == 0) { return false; }
+				const pieces = $(ptd).attr('parts').split(',');
+				var piece_out = [];
+				pieces.forEach(function(value){
+					piece_out.push('<div class="pi_DIV" value="' + value + '">' + value + '</div>');
+				});
+				return ' ><div class="pday_summary">' +  $(ptd).attr('fmla') +  '</div>' + piece_out.join('');
+	};
+    }
+    }, 300); 
+
+	
+
+});
+```
+(3) Add CSS to style
+
+This will now make it so that the items hover
+
