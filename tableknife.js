@@ -504,8 +504,10 @@ var tableknife_manager = {
 	compose_hoveri: function(ptd) {
 		const h_id = this.new_h_id();
 		const htype = $(ptd).attr('htype');
-		if (typeof (this.hovers[htype]) !== undefined) {
-			$(ptd).append('<div class="hoveri_DIV" h_id="' + h_id + '" htype="' + htype + '" ' + this.hovers[htype](this, ptd, h_id) + '</div>');
+		if (typeof (this.hovers[htype]) !== "undefined") {
+
+			const hout = this.hovers[htype](this, ptd, h_id);
+			$(ptd).append('<div class="hoveri_DIV" h_id="' + h_id + '" htype="' + htype + '" ' + hout + '</div>');
 		}
 
 		$(ptd).on('mouseleave', function(e) {
