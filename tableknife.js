@@ -284,6 +284,7 @@ class table_knife extends tn_dad {
 	decode_fmla(fmla, x) {
 		const ho = super.get_me();
 		var run_count = 0;
+		let action="";
 		while (fmla.indexOf(String.fromCharCode(189)) > -1) {
 			run_count++;
 			var instruction_start = fmla.indexOf(String.fromCharCode(189));
@@ -294,20 +295,20 @@ class table_knife extends tn_dad {
 			}
 			instruction_end = instruction_end + 1; //correct to express inclusion
 			const instruction = fmla.substring(instruction_start, instruction_end);
-			var parts = instruction.split("");
-
+			const parts = instruction.split("");
+		
 			ho.log('magic instuction: ' + instruction + ' found. Length = ' + instruction.length + ' (=  ' + (instruction_end - instruction_start) + ') command = ' + parts[0] + ' mode = ' + parts[1] + instruction.substr(3, instruction.length - 4));
 			{
 				action = parts[2];
 				switch (action) {
 					case 'A':
 						//if (x == 21) { ho.log('instruction:' + instruction + ' from ' + fmla); }
-						var target = instruction.substr(3, instruction.length - 4);
-						var targ_bits = target.split('_');
+						const target = instruction.substr(3, instruction.length - 4);
+						const targ_bits = target.split('_');
 
-						var target_id = 'TD[row=' + targ_bits[1] + '][col=' + targ_bits[2] + ']';
+						const target_id = 'TD[row=' + targ_bits[1] + '][col=' + targ_bits[2] + ']';
 						ho.log(target + " \n" + targ_bits + "\n" + target_id);
-						var target_x = $(target_id).parent().children(':visible').index($(target_id)) + 1;
+						const target_x = $(target_id).parent().children(':visible').index($(target_id)) + 1;
 						var xletter = ho.make_column_letter(target_x);
 						break;
 					case '-':
