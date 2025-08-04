@@ -1,7 +1,7 @@
 <?php
 namespace tableknife;
 
-use web_widget, to_select_r;
+use web_widget, to_select;
 
 
 if (!function_exists('array_key_first')) {
@@ -260,7 +260,7 @@ class rfield_concat extends rfield_db
             }
         }
         ksort($plist);
-        return sprintf('<div class="%1$s_holder" style="--spot_size:%2$u%%">',$this->base_class,static::spot_size()) .  implode('',$plist) . '</div>';
+        return sprintf('<div class="%1$s_holder" style="--spot_size:%2$0.2f%%">',$this->base_class,static::spot_size()) .  implode('',$plist) . '</div>';
     }
     
     function spot_size()
@@ -269,41 +269,46 @@ class rfield_concat extends rfield_db
     }
 }
 
+trait rfield_analytics {
+    protected $values = array();
+    
+    function analysis():array
+    {
+        if (empty($this->values)) { return array(); }
+        $this->val_sum = array_sum($this->values);
+        return array(
+            'ave' => number_format($this->val_sum / count($this->values),2),
+            'max' => number_format(floatval(max($this->values)),2),
+            'min' => number_format(floatval(min($this->values)),2),
+            'tot' => number_format($this->val_sum,2));
+    }
+    
+    function save_value($value)
+    {
+        $this->values[] = $value;
+        return $value;
+    }
+
+    public $analysis_count = 0;
+    public $val_sum = 0;
+}
+
 class rfield_numeric extends rfield_db
 {
-	protected $values = array();
+    use rfield_analytics;
 	protected $type  = 'numeric';
-	public $analysis_count = 0;
-	public $val_sum = 0;
-	
 	
 	function process(array &$row):string
 	{
 		return (string) $this->save_value($row [$this->source]);
 	}
-		
-	function save_value($value)
-	{
-		$this->values[] = $value;
-		return $value;
-	}
-	
+			
 	function ar_show(string $label, string $value)
 	{
 	    echo sprintf('<tr><td>%1$s</td><td>%2$s</td></tr>',$label,$value);
 	    $this->analysis_count++;
 	}
 	
-	function analysis():array
-	{
-        if (empty($this->values)) { return array(); }
-        $this->val_sum = array_sum($this->values);
-        return array(
-            'ave' => number_format($this->val_sum / count($this->values),2),
-            'max' => number_format(floatval(max($this->values)),2),
-            'min' => number_format(floatval(min($this->values)),2), 
-            'tot' => number_format($this->val_sum,2)); 
-	}
 }
 
 class rfield_numeric_s extends rfield_numeric
@@ -509,7 +514,7 @@ class report {
 	    $select_options = array_keys($this->order_by_array);
 	    $select_value = array_search($this->order_by_option,$select_options);
 	    echo sprintf('<div class="dsr_option"><form class="obs_FORM" report_id="%1$u" method=POST action="" >Sort: %2$s</form></div>',self::$report_count,
-	       to_select_r::make_object(
+	    to_select::make_object(
 	        $select_options,'','ORDER_key','os_key_' . $this->get_report_id(),$select_value, sprintf('  class="obs_SELECT" hash="%1$s" ',$this->order_by_hash)));
 	}
 	
@@ -666,10 +671,11 @@ class report {
 		foreach ($this->columns as &$my_column) 
 		{
 		    $col++;
-			if (is_a($my_column,"rfield_numeric")) {
+			if (is_a($my_column,'tableknife\rfield_numeric')) {
 		      $col_analysis[$col]	=	$my_column->analysis();
 			}
 		}
+		
 		if (!in_array('count',$aps)) {
 		    $aps[] = 'count';
 		    
