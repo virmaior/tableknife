@@ -43,7 +43,7 @@ class tn_dad extends tn_grandpa
 		}
 }
 
-class table_knife extends tn_dad {
+class TableKnife extends tn_dad {
 	la = [];
 	output = '';
 	col_names = [];
@@ -96,31 +96,30 @@ class table_knife extends tn_dad {
 		$('.csp_top_DIV').html(top_divs.join(''));
 
 		//expand the ctypes onto each TD and to the analysis rows if existent
-		ho.rt_obj.find('.header_TR TD DIV').each(function() {
-			if ($(this).attr('ctype')) {
-				var ctype = $(this).attr('ctype');
-				var my_td = $(this).parent();
-				my_td.attr('ctype', ctype);
-				var index = $(this).parent().index();
-				ho.rt_obj.find('.analysis_TR').each(
-					function() {
-						$(this).find('> TD').eq(index).attr('ctype', ctype);
-					}
-				);
-			}
+		ho.rt_obj.find('.header_TR td div').each((index, div) => {
+		  const ctype = $(div).attr('ctype');
+		  if (ctype) {
+		    const $parentTd = $(div).parent();
+		    $parentTd.attr('ctype', ctype);
+		    const tdIndex = $parentTd.index();
+		    ho.rt_obj.find('.analysis_TR').each((i, analysisTr) => {
+		      $(analysisTr).find('> td').eq(tdIndex).attr('ctype', ctype);
+		    });
+		  }
 		});
 		//hide the hidden ctypes in the table
 		hidden_ctypes.forEach(function(item) {
 			ho.rt_obj.find('TD[ctype=' + item + ']').attr('state', 'hide');
 		});
-		ho.csp.find('.csp_show_ctype').off('click').on('click', function(e) {
+		ho.csp.find('.csp_show_ctype').off('click').on('click', (e) => {
 			e.preventDefault();
+			const $t = $(e.currentTarget);
 			var my_state = 'show';
-			if ($(this).attr('state') == 'show') {
+			if ($t.attr('state') == 'show') {
 				my_state = 'hide';
 			}
-			$(this).attr('state', my_state);
-			ho.rt_obj.find('TD[ctype=' + $(this).attr('ctype') + ']').attr('state', my_state)
+			$t.attr('state', my_state);
+			ho.rt_obj.find('TD[ctype=' + $t.attr('ctype') + ']').attr('state', my_state)
 		});
 	}
 
@@ -184,28 +183,30 @@ class table_knife extends tn_dad {
 
 		var row = 0;
 		ho.rt_obj.find('>TBODY>TR').each(function() {
+			const $r = $(this);
 			row++;
 			var col = 0;
-			$(this).attr('arow', row);
-			$(this).children('TD').each(function() {
+			$r.attr('arow', row);
+			$r.children('TD').each(function() {
 				col++;
 				$(this).attr('row', row).attr('col', col).attr('cella', ho.make_column_letter(col) + row);
 			})
 		});
 
-		ho.csp.find('.csp_show_all').off('click').on('click', function(e) {
+		ho.csp.find('.csp_show_all').off('click').on('click', (e) => {
 			e.preventDefault();
 			ho.show_all();
 		});
-		ho.csp.find(".csp_column_DIV").off('click').on('click', function() {
+		ho.csp.find(".csp_column_DIV").off('click').on('click', (e) => {
 			var show = true;
-			if ($(this).attr('state') == 'show') {
-				$(this).attr('state', 'hide');
+			const $c = $(e.currentTarget);
+			if ($c.attr('state') == 'show') {
+				$c.attr('state', 'hide');
 				show = false;
 			} else {
-				$(this).attr('state', 'show');
+				$c.attr('state', 'show');
 			}
-			ho.set_column($(this).attr('column'), show);
+			ho.set_column($c.attr('column'), show);
 		});
 
 		if (ho.rt_obj.find('.rank_TD')) {
@@ -217,17 +218,17 @@ class table_knife extends tn_dad {
 
 		ho.first_hide();
 
-		ho.dsr.find('.rt_view_SELECT[report_id=' + ho.rt_id + ']').off('change').on('change', function() {
-			const show_row = $(this).val();
+		ho.dsr.find('.rt_view_SELECT[report_id=' + ho.rt_id + ']').off('change').on('change', (e) => {
+			const show_row = $(e.currentTarget).val();
 			if (show_row > 0) {
 				ho.show_only_row(show_row);
 			}
 			else { ho.show_all_rows(); }
 		});
 
-		ho.dsr.find('.dsr_button_BOX BUTTON').off('click').on('click', function(e) {
+		ho.dsr.find('.dsr_button_BOX BUTTON').off('click').on('click', (e) => {
 			e.preventDefault();
-			const $btn = $(this);
+			const $btn = $(e.currentTarget);
 			ho.process();
 			switch ($btn.attr('pastetype')) {
 				case 'XLS': ho.paste_xls(); break;
@@ -238,17 +239,19 @@ class table_knife extends tn_dad {
 
 		});
 
-		ho.dsr.find('.obs_SELECT').off('change').one('change', function(e) {
+		ho.dsr.find('.obs_SELECT').off('change').one('change', (e) => {
+			const $t = $(e.currentTarget);
 			e.preventDefault();
-			document.cookie = 'obsjump=' + $(this).attr('hash');
-			document.cookie = $(this).attr('hash') + "=" + $(this).find("option:selected").text();
+			document.cookie = 'obsjump=' + $t.attr('hash');
+			document.cookie = $t.attr('hash') + "=" + $t.find("option:selected").text();
 			ho.rt_obj.trigger('rload');
 		});
 
-		ho.rt_obj.find('.hoveri').off('mouseenter').on('mouseenter', function(e) {
+		ho.rt_obj.find('.hoveri').off('mouseenter').on('mouseenter', (e) => {
 			e.preventDefault();
-			if ($(this).find('.hoveri_DIV').length > 0) { return false; }
-			ho.manager.compose_hoveri($(this));
+			const $t = $(e.currentTarget);
+			if ($t.find('.hoveri_DIV').length > 0) { return false; }
+			ho.manager.compose_hoveri($t);
 		});
 
 		ho.eb();
@@ -350,12 +353,13 @@ class table_knife extends tn_dad {
 
 		$simplify.find('[state=hide] , [nopaste]').each(function() { $(this).remove() });
 		$simplify.find('.split_column').each(function() {
-			const my_TD = $(this).parent();
+			const $t = $(this);
+			const my_TD = $t.parent();
 			var afters = [];
 
 			var col_count = 1;
 			var next_col;
-			while ((next_col = $(this).attr('col' + col_count)) !== undefined) {
+			while ((next_col = $t.attr('col' + col_count)) !== undefined) {
 				afters.push('<td>' + next_col + ' </td>');
 				col_count++;
 			}
@@ -370,10 +374,11 @@ class table_knife extends tn_dad {
 			$(this).html($(this).attr('alt'));
 		});
 		$simplify.find('[fmla]').each(function() {
-			ho.rt_obj.attr('wcell', $(this).attr('cella'));
-			const x = $(this).closest('TR').find("TD").index(this) + 1;
-			const fmla = ho.decode_fmla($(this).attr('fmla'), x);
-			$(this).html(fmla).attr('fmla', '');
+			const $t = $(this);
+			ho.rt_obj.attr('wcell', $t.attr('cella'));
+			const x = $t.closest('TR').find("TD").index(this) + 1;
+			const fmla = ho.decode_fmla($t.attr('fmla'), x);
+			$t.html(fmla).attr('fmla', '');
 		});
 
 		ho.output = $simplify.html();
@@ -437,17 +442,19 @@ class table_knife extends tn_dad {
 		var ranks = ho.rt_obj.find(".rank_TD");
 		ho.log('rt_ ' + ho.rt_id + ' has ' + ranks.length + ' ranks');
 		ranks.each(function() {
-			const x = $(this).attr('col');
-			const y = $(this).attr('row');
-			$(this).attr('grand_total', ho.rt_obj.find('TD[col=' + ((x * 1) - 1) + '][row=' + y + ']').html());
+			const $r = $(this);
+			const x = $r.attr('col');
+			const y = $r.attr('row');
+			$r.attr('grand_total', ho.rt_obj.find('TD[col=' + ((x * 1) - 1) + '][row=' + y + ']').html());
 		});
 		var sorted_ranks = ranks.sort((a, b) => parseFloat($(b).attr('grand_total')) - parseFloat($(a).attr('grand_total')));
 		var rank_count = 1;
 		var equals = 1;
 		var current_value = 0;
 		sorted_ranks.each(function() {
-			$(this).html(rank_count);
-			if ($(this).attr('grand_total') > current_value) {
+			const $t = $(this);
+			$t.html(rank_count);
+			if ($t.attr('grand_total') > current_value) {
 				rank_count += equals;
 				equals = 1;
 			} else { equals++; }
@@ -462,7 +469,7 @@ class table_knife extends tn_dad {
 }
 
 
-var tableknife_manager = {
+const tableknife_manager = {
 	tts: [],
 	report_id: 100,
 	createCookie: function(name, value, days) {
@@ -504,45 +511,46 @@ var tableknife_manager = {
 	},
 	compose_hoveri: function(ptd) {
 		const h_id = this.new_h_id();
-		const htype = $(ptd).attr('htype');
+		const $ptd = $(ptd);
+		const htype = $ptd.attr('htype');
 		if (typeof (this.hovers[htype]) !== "undefined") {
 
 			const hout = this.hovers[htype](this, ptd, h_id);
-			$(ptd).append('<div class="hoveri_DIV" h_id="' + h_id + '" htype="' + htype + '" ' + hout + '</div>');
+			$ptd.append('<div class="hoveri_DIV" h_id="' + h_id + '" htype="' + htype + '" ' + hout + '</div>');
 		}
 
-		$(ptd).on('mouseleave', function(e) {
+		$ptd.on('mouseleave', (e) =>  {
 			e.preventDefault();
-			$('.hoveri_DIV[h_id=' + h_id + ']').remove();
+			document.querySelectorAll(`.hoveri_DIV[h_id="${h_id}"]`).forEach(element => element.remove());
 		});
 	},
 
 	initialize: function() {
-		var me = this;
-		$('.tableknife_TABLE').each(function() {
-			var report_id = $(this).attr('report_id');
-			if (report_id === undefined) {
-				report_id = me.up_id();
-				$(this).attr('report_id', report_id);
-			}
-			var y = new table_knife();
-			y.first_init();
-			y.bind(report_id, me);
-			me.tts[report_id] = y;
+		const tables = document.querySelectorAll('.tableknife_TABLE');
+		tables.forEach(table => {
+		  let reportId = table.getAttribute('report_id');
+		  if (reportId === null) {
+		    reportId = this.up_id();
+		    table.setAttribute('report_id', reportId);
+		  }
+		  const y = new TableKnife();
+		  y.first_init();
+		  y.bind(reportId, this);
+		  this.tts[reportId] = y;
 		});
 
 		//jump to location if we have a jump cookie
-		obs_location = me.readCookie('obsjump')
+		let obs_location = this.readCookie('obsjump');
 		if (obs_location) {
-			var obs = $(".obs_SELECT[hash=" + obs_location + ']');
-			if (obs.length > 0) {
-				$(document).scrollTop(obs.offset().top - 100);
-				document.cookie = 'obsjump' + '=; expires=Thu, 01-Jan-70 00:00:01 GMT;';
-			}
+		  const obs = document.querySelector(`.obs_SELECT[hash="${obs_location}"]`);
+		  if (obs) {
+		    window.scrollTo({ top: obs.getBoundingClientRect().top + window.scrollY - 100, behavior: 'smooth' });
+		    document.cookie = 'obsjump=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+		  }
 		}
 	}
 }
 
-$(document).ready(function() {
+$(document).ready(() => {
 	tableknife_manager.initialize();
 });
