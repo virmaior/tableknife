@@ -84,3 +84,18 @@ $(document).ready(function() {
 
 This will now make it so that the items hover
 
+# Rank Column
+
+If a column has the class `.rank_TD` in the table, then the system will automatically rank based on the column 1 to the left of that column.
+
+
+# Show / Hide Columns
+
+by passing a `<div class="csp_DIV" report_id="n">` with teh same report_id as the tableknife table, it will enable setting columns as visible or hidden
+
+Using       `<div class="csp_top_DIV" ctypes="hover_student_number,tableknife\rfield_db,gpoints,area_total_field,internal_percent_field,grade_percent,grade_sum_total,report_field_js_rank" hidden_ctypes="gpoints">`
+you can set which types of columns are initially visible using "ctypes" and "hidden_ctypes" attributes. It will then auto-populate this area so that the types can be turned on/off
+
+The   ` <div class="csp_columns_DIV">` ... `</div>` allows a column to toggle its visibility using the type ctype and column ids.
+
+
