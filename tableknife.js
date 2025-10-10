@@ -44,60 +44,68 @@ class tn_dad extends tn_grandpa
 }
 
 class TableKnife extends tn_dad {
-	la = [];
 	output = '';
 	col_names = [];
 	rt_id = 0;
 	columns = [];
-	rt_obj = false;
-	csp = false;
-	manager = false;
 	context="tableknife"
 	
-	first_init(report_id, rt_manager)
+	
+	constructor(report_id, rt_manager)
 	{
+		super();
+		this.la = [];		
 		this.set_me(this);
-		this.bind(report_id, rt_manager) 
+		this.manager = rt_manager;
+		this.rt_id = report_id;
+		this.bind();
 	}
 	
 	first_hide() 
 	{
 		const ho = super.get_me();
-		if (ho.csp.length == 0) { ho.log("no hide columns in " + ho.rt_id); return false; }
+
+
+		if (ho.csp === null) { ho.log("no hide columns in " + ho.rt_id);  return false; }
+		
 		const my_string = ho.manager.readCookie('rt_' + ho.rt_id);
 		if (my_string == null) { return false; }
 		if (my_string == '') { return false; }
 		ho.columns = my_string.split(',');
-		var parts = "";
-		for (var col_id in ho.columns) {
-			parts = col_id.split("=")
+		for (let col_id in ho.columns) {
+			let parts = col_id.split("=")
 			if (parts[1] == 1) {
 				ho.rt_obj.find('TR > TD:nth-child(' + parts[0] + '	)').prop('checked', false);
-				ho.set_column(1, parts[0], true);
+				ho.setColumn(1, parts[0], 'hide');
 			}
 		}
-		if (ho.csp.find('.csp_show_ctype').length != 0) { return false; }
-		const $top_DIV =  ho.csp.find('.csp_top_DIV');
-		const ctypes = $top_DIV.attr('ctypes').split(',');
-		const hidden_ctypes = $top_DIV.attr('hidden_ctypes').split(',');
-		var top_divs = [];
-		ctypes.forEach(function(item) {
-			if (item == 'rfield_db') { return false; }
-			var my_state = 'show';
-			if (hidden_ctypes.indexOf(item) != -1) { my_state = 'hide'; }
-			top_divs.push('<div class="csp_show_ctype" ctype="' + item + '" state="' + my_state + '"> ' + item + '</div>');
-		});
-		$top_DIV.html(top_divs.join(''));
 
+		const topDIV =  ho.csp.querySelector('.csp_top_DIV');
+		const ctypes = topDIV.getAttribute('ctypes').split(',');
+		const hidden_ctypes = topDIV.getAttribute('hidden_ctypes').split(',');
+		let top_divs = [];
+		ctypes.forEach( ctype => {
+			if (ctype == 'tableknife\\rfield_db') { return false; }
+			let my_state = 'show';
+			if (hidden_ctypes.indexOf(ctype) != -1) { my_state = 'hide'; }
+			top_divs.push('<div class="csp_show_ctype" ctype="' + ctype + '" state="' + my_state + '"> ' + ctype + '</div>');
+			ho.csp.querySelectorAll('.csp_column_DIV[ctype=' + ctype + ']').forEach( el => {  el.setAttribute('state',my_state); });
+
+		});
+		topDIV.innerHTML = top_divs.join('');
+		
 		//expand the ctypes onto each TD and to the analysis rows if existent
 		ho.rt_obj.find('.header_TR td div').each((index, div) => {
-		  const ctype = $(div).attr('ctype');
+		  const ctype = div.getAttribute('ctype');
 		  if (ctype) {
-		    const $parentTd = $(div).parent();
-		    $parentTd.attr('ctype', ctype);
-		    const tdIndex = $parentTd.index();
-		    ho.rt_obj.find('.analysis_TR').each((i, analysisTr) => {
-		      $(analysisTr).find('> td').eq(tdIndex).attr('ctype', ctype);
+			const parentTd = div.parentElement;
+		    parentTd.setAttribute('ctype', ctype);
+		    const tdIndex = Array.from(parentTd.parentElement.children).indexOf(parentTd);
+		    ho.tn_obj.querySelectorAll('.analysis_TR').forEach((analysisTr) => {
+				const td = analysisTr.querySelectorAll(':scope > td')[tdIndex];
+				if (td) {
+				    td.setAttribute('ctype', ctype);
+				}
 		    });
 		  }
 		});
@@ -105,50 +113,47 @@ class TableKnife extends tn_dad {
 		hidden_ctypes.forEach(function(item) {
 			ho.rt_obj.find('TD[ctype=' + item + ']').attr('state', 'hide');
 		});
-		ho.csp.find('.csp_show_ctype').off('click').on('click', (e) => {
-			e.preventDefault();
-			const $t = $(e.currentTarget);
-			let my_state = 'show';
-			if ($t.attr('state') == 'show') {
-				my_state = 'hide';
-			}
-			$t.attr('state', my_state);
-			ho.rt_obj.find('TD[ctype=' + $t.attr('ctype') + ']').attr('state', my_state)
-		});
+
 	}
 
-	set_column(col_id, my_value) 
+	setColumn(col_id, myState) 
 	{
 		const ho = super.get_me();
-		let my_state = 'show';
-		if (my_value == false) {
-			ho.columns[col_id] = col_id + "=" + 1;
-			my_state = 'hide';
-		} else {
-			ho.columns[col_id] = col_id + "=" + 0;
-		}
-		ho.rt_obj.find('td:nth-child(' + col_id + ')').attr('state', my_state);
+		let myVal = 0;
+		if (myState == 'hide') {
+			myVal = 1;			
+		} 
+		ho.columns[col_id] = col_id + "=" + myVal;
+
+		ho.rt_obj.find('td:nth-child(' + col_id + ')').attr('state', myState);
 		ho.manager.createCookie('rt_' + ho.rt_id, ho.columns.join());
 	}
 	show_only_row(row_id) 
 	{
 		const ho = super.get_me();
 		ho.log('showing only row ' + row_id);
-		ho.rt_obj.find("TR[id^=row_" + ho.rt_id + "]").addClass('hide_ROW');
-		ho.rt_obj.find("TR[id=row_" + ho.rt_id + "_" + row_id + "]").removeClass('hide_ROW');
+		ho.tn_obj.querySelectorAll(`tr[id^="row_${ho.rt_id}"]`).forEach(tr => {
+		    if (tr.id === `row_${ho.rt_id}_${row_id}`) {
+		        tr.classList.remove('hide_ROW');
+		    } else {
+		        tr.classList.add('hide_ROW');
+		    }
+		});
 	}
 	show_all_rows() 
 	{
 		const ho = super.get_me();
 		ho.log('showing all rows');
-		ho.rt_obj.find('TR').removeClass("hide_ROW");
+		ho.tn_obj.querySelectorAll(`tr[id^="row_${ho.rt_id}"]`).forEach(tr => {
+			tr.classList.remove('hide_ROW');
+		});
 	}
 	show_all() 
 	{
 		const ho = super.get_me();
 		ho.log('showing all columns');
-		ho.csp.find('.csp_column_DIV').attr('state', 'show');
-		ho.rt_obj.find('TD').attr('state', 'show');
+		ho.csp.querySelectorAll('.csp_column_DIV').forEach( cspCol =>  { cspCol.setAttribute('state', 'show'); } );
+		ho.tn_obj.querySelectorAll('TD').forEach( td => { td.setAttribute('show'); });
 	}
 
 	hide_many(many_string) 
@@ -156,7 +161,7 @@ class TableKnife extends tn_dad {
 		const ho = super.get_me();
 		const many = many_string.split(',');
 		for (let i = 0; i < many.length; i++) {
-			ho.set_column(many[i], false);
+			ho.setColumn(many[i], false);
 		}
 	}
 
@@ -164,54 +169,63 @@ class TableKnife extends tn_dad {
 		window.location.href = window.location.href;
 	}
 
-	bind(report_id, rt_manager) 
+	bind() 
 	{
 		const ho = super.get_me();
 		ho.sb();
-		ho.manager = rt_manager;
-		ho.rt_id = report_id;
-
 		ho.rt_obj = $('.tableknife_TABLE[report_id=' + ho.rt_id + ']');
-		ho.csp = $('.csp_DIV[report_id="' + ho.rt_id + '"]');
+		ho.tn_obj = ho.rt_obj[0];
+		ho.csp = document.querySelector('.csp_DIV[report_id="' + ho.rt_id + '"]');
 		ho.dsr = $('.dsr_outer[rt_id=' + ho.rt_id + ']');
-
 		
-		var row = 0;
-		ho.rt_obj.find('>TBODY>TR').each(function() {
-			const $r = $(this);
-			row++;
-			let col = 0;
-			$r.attr('arow', row);
-			$r.children('TD').each(function() {
-				col++;
-				$(this).attr('row', row).attr('col', col).attr('cella', ho.make_column_letter(col) + row);
-			})
+		let row = 0;
+		ho.tn_obj.querySelectorAll('tbody > tr').forEach(tr => {
+		    row++;
+		    tr.setAttribute('arow', row);
+		    let col = 0;
+		    tr.querySelectorAll('td').forEach(td => {
+		        col++;
+		        td.setAttribute('row', row);
+		        td.setAttribute('col', col);
+		        td.setAttribute('cella', ho.make_column_letter(col) + row);
+		    });
 		});
 
-		ho.csp.find('.csp_show_all').off('click').on('click', (e) => {
+		
+		ho.first_hide();
+		const $csp = $(ho.csp);
+		$csp.find('.csp_show_all').off('click').on('click', (e) => {
 			e.preventDefault();
 			ho.show_all();
 		});
-		ho.csp.find(".csp_column_DIV").off('click').on('click', (e) => {
-			let show = true;
-			const $c = $(e.currentTarget);
-			if ($c.attr('state') == 'show') {
-				$c.attr('state', 'hide');
-				show = false;
-			} else {
-				$c.attr('state', 'show');
-			}
-			ho.set_column($c.attr('column'), show);
+		$csp.find(".csp_column_DIV").off('click').on('click', (e) => {
+			const t = e.currentTarget;
+			let newState = 'show';
+			if (t.getAttribute('state') == 'show') {
+				newState = 'hide';
+			} 
+			t.setAttribute('state',newState);
+			ho.setColumn(t.getAttribute('column'), newState);
 		});
 
-		if (ho.rt_obj.find('.rank_TD')) {
+		$csp.find('.csp_show_ctype').off('click').on('click', (e) => {
+			e.preventDefault();
+			const t = e.currentTarget;
+			let myState = 'show';
+			if (t.getAttribute('state') === 'show') {
+			    myState = 'hide';
+			}
+			t.setAttribute('state', myState);
+			ho.tn_obj.querySelectorAll('TD[ctype=' + t.getAttribute('ctype') + ']').forEach ( (el) =>  { el.setAttribute('state', myState); } );
+		});
+		
+		if (ho.tn_obj.querySelector('.rank_TD')) {
 			ho.rank_column();
 		}
-		ho.rt_obj.off('rload').on('rload', function() {
+		ho.rt_obj.off('rload').on('rload', () => {
 			ho.rload();
 		});
 
-		ho.first_hide();
 
 		ho.dsr.find('.rt_view_SELECT[report_id=' + ho.rt_id + ']').off('change').on('change', (e) => {
 			const show_row = $(e.currentTarget).val();
@@ -325,10 +339,10 @@ class TableKnife extends tn_dad {
 		return fmla;
 	}
 
-	decode_td_fmla(me) {
+	decode_td_fmla($me) {
 		const ho = super.get_me();
-		const fmla = $(me).attr('fmla');
-		const x = $(me).closest('TR').children(':visible').index($(me)) + 1; //convert to start at 1
+		const fmla = $me.attr('fmla');
+		const x = $me.closest('TR').children(':visible').index($me) + 1; //convert to start at 1
 		ho.log("considering formula " + fmla + " at x " + x);
 		return ho.decode_fmla(fmla, x);
 	}
@@ -404,19 +418,23 @@ class TableKnife extends tn_dad {
 	}
 	save_tsv() {
 		const ho = super.get_me();
-		var o_trs = [];
+		let o_trs = [];
 
-		$(ho.output).find('TR').each(function() {
-			var o_tds = [];
-			$(this).find('TD').each(function() {
-				var me = $(this).text();
-				if (me.indexOf(',') !== -1) { me = '"' + me + '"'; }
-				if (me == "") { me = " "; }
-				o_tds.push('' + me + '');
-			})
-			o_trs.push(o_tds.join(','));
+		$(ho.output)[0].querySelectorAll('tr').forEach(tr => {
+		    let o_tds = [];
+		    tr.querySelectorAll('td').forEach(td => {
+		        let me = td.textContent;
+		        if (me.includes(',')) {
+		            me = `"${me}"`;
+		        }
+		        if (me === "") {
+		            me = " ";
+		        }
+		        o_tds.push(`${me}`);
+		    });
+		    o_trs.push(o_tds.join(','));
 		});
-
+		
 		var output = o_trs.join(String.fromCharCode(13) + String.fromCharCode(10));
 
 		const blob = new Blob([
@@ -511,9 +529,10 @@ const tableknife_manager = {
 	hovers: {
 		"val": function(me, ptd, h_id) { return ' >' + $(ptd).attr('fmla'); },
 		"fmla": function(me, ptd, h_id) {
-			const my_rt = $(ptd).closest('.tableknife_TABLE');
-			const rt_id = $(my_rt).attr('report_id');
-			var fmla = me.tts[rt_id].decode_td_fmla(ptd);
+			const $ptd = $(ptd);
+			const $my_rt = $ptd.closest('.tableknife_TABLE');
+			const rt_id = $my_rt.attr('report_id');
+			var fmla = me.tts[rt_id].decode_td_fmla($ptd);
 			return ' >' + fmla;
 		}
 	},
@@ -522,11 +541,9 @@ const tableknife_manager = {
 		const $ptd = $(ptd);
 		const htype = $ptd.attr('htype');
 		if (typeof (this.hovers[htype]) !== "undefined") {
-
 			const hout = this.hovers[htype](this, ptd, h_id);
 			$ptd.append('<div class="hoveri_DIV" h_id="' + h_id + '" htype="' + htype + '" ' + hout + '</div>');
 		}
-
 		$ptd.on('mouseleave', (e) =>  {
 			e.preventDefault();
 			document.querySelectorAll(`.hoveri_DIV[h_id="${h_id}"]`).forEach(element => element.remove());
@@ -541,8 +558,7 @@ const tableknife_manager = {
 		    reportId = this.up_id();
 		    table.setAttribute('report_id', reportId);
 		  }
-		  const y = new TableKnife();
-		  y.first_init(reportId, this);
+		  const y = new TableKnife(reportId, this);
 		  this.tts[reportId] = y;
 		});
 
