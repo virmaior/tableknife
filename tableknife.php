@@ -3,7 +3,6 @@ namespace tableknife;
 
 use web_widget, to_select;
 
-
 if (!function_exists('array_key_first')) {
     function array_key_first(array $arr) {
         foreach($arr as $key => $unused) {
@@ -12,7 +11,6 @@ if (!function_exists('array_key_first')) {
         return NULL;
     }
 }
-
 
 trait multi_col
 {
@@ -72,12 +70,7 @@ abstract class rfield {
 	    return sprintf('<td %1$s >',$special );
 
 	}
-	
-	function predelimit_title($predelimiter): string
-	{
-	    return $predelimiter;
-	}
-	
+
 	function make_title(string $title):string
 	{
 		return $title;	
@@ -453,7 +446,7 @@ class report {
 	public $special_predelimeter = "";
 	public $delimiter = "\t";
 	public $row_predelimiter = "";
-	public $firstrow_predelimeter = "";
+	public $special_delimits = array( 0 => array('predelimeter' => '' , 'postdelimiter' =='' ,'postcol' => '','precol' => '') );
 	public $row_delimiter = "\n";
 	public $filename, $mode, $blank_text;
 	public $row_count = 0;
@@ -609,11 +602,12 @@ class report {
 	 */
 	function title_row():void 
 	{
-		echo $this->firstrow_predelimiter;
+		echo $this->delimits[0]['prerow'];
 		foreach ( $this->columns as $title => $col ) {
-			echo $col->predelimit_title($this->predelimiter) .  $col->make_title($title) . $this->delimiter;
+			echo $this->delimits[0]['precol'] .  $col->make_title($title) . $this->delimits[0]['postcol'];
 		}
-		echo $this->row_delimiter;
+		echo $this->delimits[0]['postrow'];
+		
 	}
 	
 	/**
@@ -625,6 +619,11 @@ class report {
        return sprintf($this->row_predelimiter,$this->row_count,2-($this->row_count %2));
     }   
 	
+    function rowCalculate(array $row): void
+    {
+        return ;
+    }
+    
 	/*
 	 * this function produces the data rows
 	 */
@@ -632,10 +631,12 @@ class report {
 	    if (is_null($filter)) {
 	        $filter = new \tableknife\filter();
 	    }
-
+	    
+	    if (!$rows_query) { return; }
 		while ( $row = mysqli_fetch_assoc ( $rows_query ) ) {
 			$row['row_number'] = $this->row_count;
 			if ($filter->skip_row($row)) { continue; }
+			$this->rowCalculate($row);
 			echo static::row_delimit($row);
 			++ $this->row_count;
 			$col_count = 0;
@@ -747,7 +748,7 @@ class report_web extends report {
     {
         parent::__construct($columns,$blank_message,'</td>','</tr>');
         $this->predelimiter = '<td>';
-        $this->firstrow_predelimiter = '<tr class="header_TR">';
+        $this->delimits = array( 0 => array('prerow' => '<thead><tr class="header_TR">' , 'postrow' => '</tr></thead>' , 'precol' => '<th>' ,'postcol' => '</th>') );
         $this->row_predelimiter = '<tr class="report_R%2$u" id="row_' . $this->get_report_id() . '_%1$d">';
     }
     

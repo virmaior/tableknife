@@ -41,6 +41,103 @@ class tn_dad extends tn_grandpa
 			ho.log('initialized ' + ho.context);
 			ho.bind();
 		}
+		/**
+		 * does a bind
+		 * @param {string} sel - selector string
+		 * @param {string} etype - event type , e.g., click or submit
+		 * @param {function} f - function to occur when that event
+		 * @param {boolean} clearBind - whether or not to clear any current binding
+		 * @param {boolean} onlyOnce - whether or not to make event occur only once
+		 */
+		binderFunction(targ,sel,etype, f,clearBind = true,onlyOnce = false)
+		{
+			const bName = "=_bind_" + etype;
+			let params = {};
+			if (onlyOnce) {
+				params["once"] = true;
+			}
+			targ.querySelectorAll(sel).forEach( el => {
+				if (clearBind) { 
+					if (Object.hasOwn(el,bName )) {
+						el.removeEventListener(etype,el[bName]);
+					}
+				}
+				el[bName] = f;
+				el.addEventListener(etype,f,params);
+			});
+		}
+
+		/**
+		 * Performs an operation with various parameters.
+		 * @param {string} sel - selector string
+		 * @param {function} f - function to occur when that event
+		 * @param {boolean} clearBind - whether or not to clear any current binding
+		 * @param {boolean} onlyOnce - whether or not to make event occur only once
+		 */
+		bindClick(sel,f,clearBind,onlyOnce) 
+		{
+			this.bindClickTarget(document,sel,f,clearBind,onlyOnce);
+		}
+
+
+		/**
+		 * Performs an operation with various parameters.
+		 * @param {HTMLElement} targ 
+		 * @param {string} sel - selector string
+		 * @param {function} f - function to occur when that event
+		 * @param {boolean} clearBind - whether or not to clear any current binding
+		 * @param {boolean} onlyOnce - whether or not to make event occur only once
+		 */
+		bindClickTarget(targ,sel,f,clearBind,onlyOnce) 
+		{
+			this.binderFunction(targ,sel,"click",f,clearBind,onlyOnce);
+		}	
+		/**
+		 * Performs an operation with various parameters.
+		 * @param {string} sel - selector string
+		 * @param {function} f - function to occur when that event
+		 * @param {boolean} clearBind - whether or not to clear any current binding
+		 * @param {boolean} onlyOnce - whether or not to make event occur only once
+		 */
+		bindChange(sel,f,clearBind,onlyOnce) 
+		{
+			this.binderFunction(document,sel,"change",f,clearBind,onlyOnce);
+		}
+
+		/**
+		 * Performs an operation with various parameters.
+		 * @param {string} sel - selector string
+		 * @param {function} f - function to occur when that event
+		 * @param {boolean} clearBind - whether or not to clear any current binding
+		 * @param {boolean} onlyOnce - whether or not to make event occur only once
+		 */
+		bindForm(sel,f,clearBind = true, onlyOnce = true) 
+		{
+			this.binderFunction(document,sel,"submit",f,clearBind,onlyOnce);
+		}
+			
+		/**
+		 * Performs an operation with various parameters.
+		 * @param {string} sel - selector string
+		 * @param {function} f - function to occur when that event
+		 * @param {boolean} clearBind - whether or not to clear any current binding
+		 * @param {boolean} onlyOnce - whether or not to make event occur only once
+		 */
+		bindInput(sel,f,clearBind,onlyOnce)
+		{
+			this.binderFunction(document,sel,"input",f,clearBind,onlyOnce);
+
+		}
+			
+		/**
+		 * @param {HTMLElement}  t
+		 */
+		getAction(t)
+		{
+			return t.getAttribute('action');
+		}
+
+		
 }
 
 class TableKnife extends tn_dad {
@@ -65,7 +162,6 @@ class TableKnife extends tn_dad {
 	{
 		const ho = super.get_me();
 
-
 		if (ho.csp === null) { ho.log("no hide columns in " + ho.rt_id);  return false; }
 		
 		const my_string = ho.manager.readCookie('rt_' + ho.rt_id);
@@ -75,8 +171,9 @@ class TableKnife extends tn_dad {
 		for (let col_id in ho.columns) {
 			let parts = col_id.split("=")
 			if (parts[1] == 1) {
-				ho.rt_obj.find('TR > TD:nth-child(' + parts[0] + '	)').prop('checked', false);
-				ho.setColumn(1, parts[0], 'hide');
+				ho.rtObj.querySelectorAll('tr > td:nth-child(' + parts[0] + ')')
+				         .forEach(td => td.checked = false);		
+		 		ho.setColumn(1, parts[0], 'hide');
 			}
 		}
 
@@ -95,13 +192,13 @@ class TableKnife extends tn_dad {
 		topDIV.innerHTML = top_divs.join('');
 		
 		//expand the ctypes onto each TD and to the analysis rows if existent
-		ho.rt_obj.find('.header_TR td div').each((index, div) => {
+		ho.rtObj.querySelectorAll('.header_TR TD > div, .header_TR TH > div').forEach(( div) => {
 		  const ctype = div.getAttribute('ctype');
 		  if (ctype) {
 			const parentTd = div.parentElement;
 		    parentTd.setAttribute('ctype', ctype);
 		    const tdIndex = Array.from(parentTd.parentElement.children).indexOf(parentTd);
-		    ho.tn_obj.querySelectorAll('.analysis_TR').forEach((analysisTr) => {
+		    ho.rtObj.querySelectorAll('.analysis_TR').forEach((analysisTr) => {
 				const td = analysisTr.querySelectorAll(':scope > td')[tdIndex];
 				if (td) {
 				    td.setAttribute('ctype', ctype);
@@ -110,12 +207,23 @@ class TableKnife extends tn_dad {
 		  }
 		});
 		//hide the hidden ctypes in the table
-		hidden_ctypes.forEach(function(item) {
-			ho.rt_obj.find('TD[ctype=' + item + ']').attr('state', 'hide');
+		hidden_ctypes.forEach( (item) => {
+			ho.ctypeState(item,'hide');
 		});
-
+	}
+	
+	ctypeState(item,state)
+	{
+		this.rtObj.gridSet = 'broken';
+		this.rtObj.querySelectorAll('TD[ctype="' + item + '"], TH[ctype="' + item + '"]').forEach(td => { td.setAttribute('state', state); } );
 	}
 
+	colState(col_id,state)
+	{
+		this.rtObj.gridSet = 'broken';
+		this.rtObj.querySelectorAll(`td:nth-child(${col_id}) , td:nth-child(${col_id})`).forEach( td => { td.setAttribute('state',state); });
+	}
+	
 	setColumn(col_id, myState) 
 	{
 		const ho = super.get_me();
@@ -124,15 +232,14 @@ class TableKnife extends tn_dad {
 			myVal = 1;			
 		} 
 		ho.columns[col_id] = col_id + "=" + myVal;
-
-		ho.rt_obj.find('td:nth-child(' + col_id + ')').attr('state', myState);
+		ho.colState(col_id,myState);
 		ho.manager.createCookie('rt_' + ho.rt_id, ho.columns.join());
 	}
 	show_only_row(row_id) 
 	{
 		const ho = super.get_me();
 		ho.log('showing only row ' + row_id);
-		ho.tn_obj.querySelectorAll(`tr[id^="row_${ho.rt_id}"]`).forEach(tr => {
+		ho.rtObj.querySelectorAll(`tr[id^="row_${ho.rt_id}"]`).forEach(tr => {
 		    if (tr.id === `row_${ho.rt_id}_${row_id}`) {
 		        tr.classList.remove('hide_ROW');
 		    } else {
@@ -144,7 +251,7 @@ class TableKnife extends tn_dad {
 	{
 		const ho = super.get_me();
 		ho.log('showing all rows');
-		ho.tn_obj.querySelectorAll(`tr[id^="row_${ho.rt_id}"]`).forEach(tr => {
+		ho.rtObj.querySelectorAll(`tr[id^="row_${ho.rt_id}"]`).forEach(tr => {
 			tr.classList.remove('hide_ROW');
 		});
 	}
@@ -153,7 +260,7 @@ class TableKnife extends tn_dad {
 		const ho = super.get_me();
 		ho.log('showing all columns');
 		ho.csp.querySelectorAll('.csp_column_DIV').forEach( cspCol =>  { cspCol.setAttribute('state', 'show'); } );
-		ho.tn_obj.querySelectorAll('TD').forEach( td => { td.setAttribute('show'); });
+		ho.rtObj.querySelectorAll('TD, TH').forEach( td => { td.setAttribute('state','show'); });
 	}
 
 	hide_many(many_string) 
@@ -168,37 +275,15 @@ class TableKnife extends tn_dad {
 	rload() {
 		window.location.href = window.location.href;
 	}
-
-	bind() 
+	
+	cspBind()
 	{
 		const ho = super.get_me();
-		ho.sb();
-		ho.rt_obj = $('.tableknife_TABLE[report_id=' + ho.rt_id + ']');
-		ho.tn_obj = ho.rt_obj[0];
-		ho.csp = document.querySelector('.csp_DIV[report_id="' + ho.rt_id + '"]');
-		ho.dsr = $('.dsr_outer[rt_id=' + ho.rt_id + ']');
-		
-		let row = 0;
-		ho.tn_obj.querySelectorAll('tbody > tr').forEach(tr => {
-		    row++;
-		    tr.setAttribute('arow', row);
-		    let col = 0;
-		    tr.querySelectorAll('td').forEach(td => {
-		        col++;
-		        td.setAttribute('row', row);
-		        td.setAttribute('col', col);
-		        td.setAttribute('cella', ho.make_column_letter(col) + row);
-		    });
-		});
-
-		
-		ho.first_hide();
-		const $csp = $(ho.csp);
-		$csp.find('.csp_show_all').off('click').on('click', (e) => {
+		ho.bindClickTarget(ho.csp,'.csp_show_all', (e) => {
 			e.preventDefault();
 			ho.show_all();
 		});
-		$csp.find(".csp_column_DIV").off('click').on('click', (e) => {
+		ho.bindClickTarget(ho.csp,'.csp_column_DIV', (e) => {
 			const t = e.currentTarget;
 			let newState = 'show';
 			if (t.getAttribute('state') == 'show') {
@@ -207,61 +292,107 @@ class TableKnife extends tn_dad {
 			t.setAttribute('state',newState);
 			ho.setColumn(t.getAttribute('column'), newState);
 		});
-
-		$csp.find('.csp_show_ctype').off('click').on('click', (e) => {
+		ho.bindClickTarget(ho.csp,'.csp_show_ctype', (e) => {
 			e.preventDefault();
 			const t = e.currentTarget;
+			const ctype =  t.getAttribute('ctype') ;
 			let myState = 'show';
 			if (t.getAttribute('state') === 'show') {
 			    myState = 'hide';
 			}
 			t.setAttribute('state', myState);
-			ho.tn_obj.querySelectorAll('TD[ctype=' + t.getAttribute('ctype') + ']').forEach ( (el) =>  { el.setAttribute('state', myState); } );
+			ho.ctypeState(ctype,myState);
 		});
+	}
+
+	bind() 
+	{
+		const ho = super.get_me();
+		ho.sb();
+		ho.rtObj = document.querySelector('.tableknife_TABLE[report_id="' + ho.rt_id + '"]');
+		ho.csp = document.querySelector('.csp_DIV[report_id="' + ho.rt_id + '"]');
+		ho.dsr = document.querySelector('.dsr_outer[rt_id="' + ho.rt_id + '"]');
 		
-		if (ho.tn_obj.querySelector('.rank_TD')) {
+		let row = 0;
+		ho.rtObj.querySelectorAll('tbody > tr , thead > tr').forEach(tr => {
+		    row++;
+		    tr.setAttribute('arow', row);
+		    let col = 0;
+		    tr.querySelectorAll('td , th').forEach(td => {
+		        col++;
+		        td.setAttribute('row', row);
+		        td.setAttribute('col', col);
+		        td.setAttribute('cella', ho.make_column_letter(col) + row);
+		    });
+		});
+
+		ho.first_hide();
+		if (ho.csp) { ho.cspBind(); }
+
+		
+		if (ho.rtObj.querySelector('.rank_TD')) {
 			ho.rank_column();
 		}
-		ho.rt_obj.off('rload').on('rload', () => {
-			ho.rload();
+		if (ho.rtObj._rload) {
+			ho.rtObj.removeEventListener('rload',ho.rtObj._rload); 
+		}
+		ho.rtObj._rload = () => {  ho.rload(); }
+		ho.rtObj.addEventListener('rload',ho.rtObj._rload );
+
+		
+		ho.binderFunction(ho.rtObj,'.hoveri','mouseenter', (e) => {
+			e.preventDefault();
+			const t= e.currentTarget;
+			if (t.querySelector('.hoveri_DIV')) { return false; }
+			ho.manager.compose_hoveri(t);
 		});
-
-
-		ho.dsr.find('.rt_view_SELECT[report_id=' + ho.rt_id + ']').off('change').on('change', (e) => {
-			const show_row = $(e.currentTarget).val();
+		
+		if (!ho.dsr)  {
+			console.log('exiting out due to no dsr set' + ho.rt_id);
+			return false; 
+		}
+		ho.binderFunction(ho.dsr,'.rt_view_SELECT[report_id="' + ho.rt_id + '"]','change', (e) => {
+			const show_row = e.currentTarget.value;
 			if (show_row > 0) {
 				ho.show_only_row(show_row);
 			}
 			else { ho.show_all_rows(); }
 		});
 
-		ho.dsr.find('.dsr_button_BOX BUTTON').off('click').on('click', (e) => {
+		ho.bindClickTarget(ho.dsr,'.dsr_button_BOX BUTTON', (e) => {
 			e.preventDefault();
-			const $btn = $(e.currentTarget);
-			ho.process();
-			switch ($btn.attr('pastetype')) {
+			const pasteType = e.currentTarget.getAttribute('pastetype');
+			ho.log('click fired on ' + pasteType );
+			ho.processTable();
+			switch (pasteType) {
 				case 'XLS': ho.paste_xls(); break;
 				case 'G': ho.paste_g(); break;
 				case 'TSV': ho.save_tsv(); break;
 			}
-			ho.dsr.attr('state','done');
+			ho.dsr.setAttribute('state','done');
 
 		});
-
-		ho.dsr.find('.obs_SELECT').off('change').one('change', (e) => {
-			const $t = $(e.currentTarget);
+		ho.binderFunction(ho.dsr, '.obs_SELECT','change', (e) => {
+			const t = e.currentTarget;
 			e.preventDefault();
-			document.cookie = 'obsjump=' + $t.attr('hash');
-			document.cookie = $t.attr('hash') + "=" + $t.find("option:selected").text();
-			ho.rt_obj.trigger('rload');
-		});
 
-		ho.rt_obj.find('.hoveri').off('mouseenter').on('mouseenter', (e) => {
-			e.preventDefault();
-			const $t = $(e.currentTarget);
-			if ($t.find('.hoveri_DIV').length > 0) { return false; }
-			ho.manager.compose_hoveri($t);
-		});
+			const hash = t.getAttribute('hash');
+			const selectedOption = t.options[t.selectedIndex];
+			if (!selectedOption) return;
+			
+			const selectedText = selectedOption.textContent;
+
+			// Set both cookies with consistent attributes
+			// Adjust path/domain/SameSite/expires as needed for your app
+			const cookieOptions = '; path=/; SameSite=Lax; max-age=31536000';  // 1 year; tweak as needed
+
+			document.cookie = `obsjump=${hash}${cookieOptions}`;
+			document.cookie = `${hash}=${selectedText}${cookieOptions}`;
+			
+	
+			ho.rtObj.dispatchEvent(new CustomEvent('rload'));
+		},true,true);
+
 
 		ho.eb();
 	}
@@ -289,11 +420,11 @@ class TableKnife extends tn_dad {
 	process_inner_table(that) 
 	{
 		var pieces = []
-		that.find('>*>tr>td, >tr>td').each(function() { pieces.push($(this).text()); });
+		that.querySelectorAll('TABLE TD').forEach((p)  => { pieces.push(p.textContent); });
 		that.replaceWith(pieces.join(' '));
 	}
 
-	decode_fmla(fmla, x) {
+	decode_fmla(fmla, y) {
 		const ho = super.get_me();
 		var run_count = 0;
 		let action="";
@@ -317,18 +448,16 @@ class TableKnife extends tn_dad {
 						//if (x == 21) { ho.log('instruction:' + instruction + ' from ' + fmla); }
 						const target = instruction.substr(3, instruction.length - 4);
 						const targ_bits = target.split('_');
-
-						const target_id = 'TD[row=' + targ_bits[1] + '][col=' + targ_bits[2] + ']';
-						ho.log(target + " \n" + targ_bits + "\n" + target_id);
-						const target_x = $(target_id).parent().children(':visible').index($(target_id)) + 1;
-						var xletter = ho.make_column_letter(target_x);
+						const targTD = ho.rtObj.querySelector('TD[row="' + targ_bits[1] + '"][col="' + targ_bits[2] + '"]');
+						const target_y = targTD.colNum + 1;
+						var yletter = ho.make_column_letter(target_y);
 						break;
 					case '-':
-					case '+': var xletter = ho.make_column_letter(x - parts[3]); break;
+					case '+': var yletter = ho.make_column_letter(y - parts[3]); break;
 					default: console.log('unknown parse action ' + action + ' in fmla');
 
 				}
-				fmla = fmla.split(instruction).join(xletter);
+				fmla = fmla.split(instruction).join(yletter);
 			}
 			if (run_count > 50) {
 				ho.log('parse loop for fmla. dying due to inability to parse in 50 attempts.');
@@ -339,60 +468,93 @@ class TableKnife extends tn_dad {
 		return fmla;
 	}
 
-	decode_td_fmla($me) {
+	decode_td_fmla(me) {
 		const ho = super.get_me();
-		const fmla = $me.attr('fmla');
-		const x = $me.closest('TR').children(':visible').index($me) + 1; //convert to start at 1
-		ho.log("considering formula " + fmla + " at x " + x);
-		return ho.decode_fmla(fmla, x);
+		const fmla = me.getAttribute('fmla');
+		ho.makeGrid(ho.rtObj);
+		const y = me.colNum;
+		ho.log("considering formula " + fmla + " at col " + y);
+		return ho.decode_fmla(fmla, y);
 	}
 
-	process() 
+	makeGrid(myTable, vTest = true)
+	{
+		if ('gridSet' in myTable && myTable.gridSet == 'curent')  { return; }
+		let x = 0;
+		myTable.querySelectorAll('tr').forEach( tr => {
+			if (vTest) { if (!tr.checkVisibility()) { return false; }}
+			tr.rowNum = x;
+			x = x +1;
+			let y = 0;
+			tr.querySelectorAll('td').forEach (td => {
+				if (vTest) { if (!td.checkVisibility()) { return false; } }
+				td.colNum = y;
+				y = y +1;
+			});
+		} );	
+		myTable.gridSet = 'current';
+	}
+	
+	processTable() 
 	{
 		const ho = super.get_me();
-		ho.log("copy action fired for rt_id = " + ho.rt_id);
-		if (ho.dsr.attr('state') == 'processing') {
+		ho.log("process action fired for rt_id = " + ho.rt_id);
+		if (ho.dsr.getAttribute('state') == 'processing') {
 			alert('already in progress.');
 			return false;
 		}
-		ho.dsr.attr('state', 'processing');
+		ho.dsr.setAttribute('state', 'processing');
 
-		var $simplify = $('<table class="tableknife_TABLE">' + ho.rt_obj.html() + '</table>');
-		$simplify.find('TABLE:not(.tableknife_TABLE)').each(function() { ho.process_inner_table($(this)); });
+		const simplify = document.createElement('table');
+		simplify.className = 'tableknife_TABLE';
+		simplify.innerHTML = ho.rtObj.innerHTML;
+		
+		simplify.querySelectorAll('table:not(.tableknife_TABLE)')
+		        .forEach(table => ho.process_inner_table(table));
+		ho.log('stripped / simplified internal tables');
 
-		$simplify.find('[state=hide] , [nopaste]').each(function() { $(this).remove() });
-		$simplify.find('.split_column').each(function() {
-			const $t = $(this);
-			const my_TD = $t.parent();
+		simplify.querySelectorAll('[state=hide] , [nopaste]').forEach((me) => { me.remove() });
+		ho.log('removed no paste');
+
+		simplify.querySelectorAll('.split_column').forEach (splitC =>  {
+			const myTD = splitC.parentElement;
 			var afters = [];
-
+			let newTD = false;
 			var col_count = 1;
 			var next_col;
-			while ((next_col = $t.attr('col' + col_count)) !== undefined) {
-				afters.push('<td>' + next_col + ' </td>');
+			while ((next_col = splitC.getAttribute('col' + col_count)) !== null) {
+				newTD = document.createElement('td');
+				newTD.innerHTML = next_col;
+				afters.push(newTD);
 				col_count++;
 			}
-			my_TD.after(afters.join(''));
-			if (my_TD.attr('row') == 1) {
-				var al = '.analysis_TR > TD[col=' + my_TD.attr('col') + ']';
-				$simplify.find(al).after('<td></td>'.repeat(col_count - 2));
+			myTD.after(...afters);
+
+
+			if (myTD.getAttribute('row') == 1) {
+				simplify.querySelectorAll('.analysis_TR > TD[col="' + myTD.getAttribute('col') + '"]').forEach(el => {
+				  const fragment = document.createDocumentFragment();
+				  for (let i = 0; i < col_count - 2; i++) {
+				    fragment.appendChild(document.createElement('td'));
+				  }
+				  el.after(fragment);
+				});
 			}
-			my_TD.remove();
+			myTD.remove();
 		});
-		$simplify.find('.alt_column').each(function() {
-			$(this).html($(this).attr('alt'));
+		simplify.querySelectorAll('.alt_column').forEach ( ac => {
+			ac.innerHTML = ac.getAttribute('alt');
 		});
-		$simplify.find('[fmla]').each(function() {
-			const $t = $(this);
-			ho.rt_obj.attr('wcell', $t.attr('cella'));
-			const x = $t.closest('TR').find("TD").index(this) + 1;
-			const fmla = ho.decode_fmla($t.attr('fmla'), x);
-			$t.html(fmla).attr('fmla', '');
+		ho.makeGrid(simplify,false);
+		//add row coordinate information (needed for formulas)
+
+		simplify.querySelectorAll('[fmla]').forEach( (a) => {
+			ho.rtObj.setAttribute('wcell', a.getAttribute('cella'));
+			a.innerHTML= ho.decode_fmla(a.getAttribute('fmla'), a.colNum + 1);
 		});
 
-		ho.output = $simplify.html();
-		ho.dsr.attr('state', '');
-		ho.dsr.find('.dsr_paste_BIN').html();
+		ho.output = simplify.innerHTML;
+		ho.dsr.setAttribute('state', '');
 	}
 	paste_xls() {
 		const ho = super.get_me();
@@ -407,22 +569,24 @@ class TableKnife extends tn_dad {
 	}
 	paste_g() {
 		const ho = super.get_me();
-		var output = ho.output.replace('<tr', '<tx').replace('<td', '<ty'). //remove first offset
+		let output = ho.output.replace('<thead','<tx').replace('<th', '<ty').replace('<tr', '<tx').replace('<td', '<ty'). //remove first offset
+			replaceAll('<th','<td'). //switch all TH to TD
 			replaceAll('<td', String.fromCharCode(9) + '<td'). //replace all <td with control character
 			replaceAll('<tr', String.fromCharCode(13) + String.fromCharCode(10) + '<tr'). //replace all <TR with control character
 			replaceAll('&nbsp;', ' '). //replace space entity with space
 			replaceAll('&amp;', '&');
-		var output = output.replace(/<[^>]*>?/gm, '').replaceAll(String.fromCharCode(13) + String.fromCharCode(10) + String.fromCharCode(9), String.fromCharCode(13) + String.fromCharCode(10));
+		output = output.replace(/<[^>]*>?/gm, '').replaceAll(String.fromCharCode(13) + String.fromCharCode(10) + String.fromCharCode(9), String.fromCharCode(13) + String.fromCharCode(10));
 		ho.log('pasted to clipboard in Sheets mode: ' + output);
 		navigator.clipboard.writeText(output);
 	}
 	save_tsv() {
 		const ho = super.get_me();
 		let o_trs = [];
-
-		$(ho.output)[0].querySelectorAll('tr').forEach(tr => {
+		const z = document.createElement('div');
+		z.innerHTML = '<table>' +  ho.output + '</table>';
+		z.querySelectorAll('tr').forEach(tr => {
 		    let o_tds = [];
-		    tr.querySelectorAll('td').forEach(td => {
+		    tr.querySelectorAll('td , th').forEach(td => {
 		        let me = td.textContent;
 		        if (me.includes(',')) {
 		            me = `"${me}"`;
@@ -431,12 +595,13 @@ class TableKnife extends tn_dad {
 		            me = " ";
 		        }
 		        o_tds.push(`${me}`);
+				console.log(me);
 		    });
 		    o_trs.push(o_tds.join(','));
 		});
 		
 		var output = o_trs.join(String.fromCharCode(13) + String.fromCharCode(10));
-
+		console.log(output);
 		const blob = new Blob([
 			new Uint8Array([0xEF, 0xBB, 0xBF]), // UTF-8 BOM
 			output
@@ -452,14 +617,13 @@ class TableKnife extends tn_dad {
 
 	rank_column() {
 		const ho = super.get_me();
-		const rtObj = ho.rt_obj[0]; // Convert jQuery object to DOM element
-		const ranks = rtObj.querySelectorAll('.rank_TD');
+		const ranks = ho.rtObj.querySelectorAll('.rank_TD');
 		ho.log(`rt_${ho.rt_id} has ${ranks.length} ranks`);
 
 		ranks.forEach(element => {
 		  const col = element.getAttribute('col');
 		  const row = element.getAttribute('row');
-		  const targetTd = rtObj.querySelector(`td[col="${Number(col) - 1}"][row="${row}"]`);
+		  const targetTd = ho.rtObj.querySelector(`td[col="${Number(col) - 1}"][row="${row}"]`);
 		  const grandTotal = targetTd ? targetTd.innerHTML : '';
 		  element.setAttribute('grand_total', grandTotal);
 		});
@@ -495,7 +659,7 @@ class TableKnife extends tn_dad {
 }
 
 
-const tableknife_manager = {
+var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 	tts: [],
 	report_id: 100,
 	createCookie: function(name, value, days) {
@@ -527,24 +691,41 @@ const tableknife_manager = {
 
 	},
 	hovers: {
-		"val": function(me, ptd, h_id) { return ' >' + $(ptd).attr('fmla'); },
+		"val": function(me, ptd, h_id) { return ' >' + ptd.getAttribute('fmla'); },
 		"fmla": function(me, ptd, h_id) {
-			const $ptd = $(ptd);
-			const $my_rt = $ptd.closest('.tableknife_TABLE');
-			const rt_id = $my_rt.attr('report_id');
-			var fmla = me.tts[rt_id].decode_td_fmla($ptd);
+			const my_rt = ptd.closest('.tableknife_TABLE');
+			const rt_id = my_rt.getAttribute('report_id');
+			var fmla = me.tts[rt_id].decode_td_fmla(ptd);
 			return ' >' + fmla;
 		}
 	},
 	compose_hoveri: function(ptd) {
 		const h_id = this.new_h_id();
-		const $ptd = $(ptd);
-		const htype = $ptd.attr('htype');
+		const htype = ptd.getAttribute('htype');
 		if (typeof (this.hovers[htype]) !== "undefined") {
 			const hout = this.hovers[htype](this, ptd, h_id);
-			$ptd.append('<div class="hoveri_DIV" h_id="' + h_id + '" htype="' + htype + '" ' + hout + '</div>');
-		}
-		$ptd.on('mouseleave', (e) =>  {
+			const myId = crypto.randomUUID();
+			
+			ptd.insertAdjacentHTML('beforeend', 
+			  `<div id="${myId}" class="hoveri_DIV" h_id="${h_id}" htype="${htype}" ${hout}</div>`
+			);		
+			
+			const hoverDIV = document.getElementById(myId);
+			requestAnimationFrame(() => {
+
+			const rect2 = hoverDIV.getBoundingClientRect();
+			const overflowRight = rect2.right - window.innerWidth;
+			console.log({
+			  right: rect2.right,
+			  innerWidth: window.innerWidth,
+			  overflowRight
+			});
+
+			if (overflowRight > 0 ) {  hoverDIV.style.left = `-${Math.ceil(overflowRight + 30)}px`;  }
+			});
+		}		
+			
+		ptd.addEventListener('mouseleave', (e) =>  {
 			e.preventDefault();
 			document.querySelectorAll(`.hoveri_DIV[h_id="${h_id}"]`).forEach(element => element.remove());
 		});
@@ -576,4 +757,7 @@ const tableknife_manager = {
 
 document.addEventListener('DOMContentLoaded', () => {
   tableknife_manager.initialize();
-});
+  document.dispatchEvent(new CustomEvent('tableknifeLoaded', {
+    detail: { version: '1.0' }
+  }));
+},{once:true});

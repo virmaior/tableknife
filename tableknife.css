@@ -23,8 +23,12 @@
   hyphens: auto;	
 }
 
-.tableknife_TABLE TD[state=hide] {
+.tableknife_TABLE TD[state=hide] ,  .tableknife_TABLE TH[state=hide] {
     display:none;
+}
+
+.tableknife_TABLE TH {
+	text-align:left;
 }
 
 .tableknife_TABLE .hoveri {
@@ -39,3 +43,4 @@
 	outline:1px solid green;
 	z-index:100;
 }
+
