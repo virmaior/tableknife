@@ -2,10 +2,11 @@
 Table Knife is a PHP/JQuery tool for making HTML tables that can be style, downloaded, and cut/paste to Google Sheets and XLS
 
 
-On the Jquery side, tableknife takes a `<TABLE>` element with `class=tableknife_TABLE` and provides a few interesting functions.
+With vanilla JavaScript, tableknife takes all of the `<TABLE>` elements with `class=tableknife_TABLE` and makes them into table knives.
 
 1. It allows exporting of the TABLE to TSV, Google Sheets-friendly paste, or XLS friendly past
 2. It allows hovering using the class "hoveri"
+3. It allows sorting on the front end using JavaScript with custom sorters
 
 On the PHP side, tableknife allows the formatting of TABLES based on their incoming data. Each field is rendered via an `rfield` object using the `process(array $row):string` function. The $row is generally a mysqli_fetch_assoc but it can take any sort of array-like data.
 
@@ -97,5 +98,7 @@ Using       `<div class="csp_top_DIV" ctypes="hover_student_number,tableknife\rf
 you can set which types of columns are initially visible using "ctypes" and "hidden_ctypes" attributes. It will then auto-populate this area so that the types can be turned on/off
 
 The   ` <div class="csp_columns_DIV">` ... `</div>` allows a column to toggle its visibility using the type ctype and column ids.
+
+
 
 

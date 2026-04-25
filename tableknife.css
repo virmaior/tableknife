@@ -44,3 +44,25 @@
 	z-index:100;
 }
 
+.tableknife_TABLE .sortCol
+{
+	position:relative;
+}
+
+.tableknife_TABLE .sortCol::after {
+	position:absolute;
+	right:2px;
+	content:"\2013";
+	color:#999;
+	top:2px;
+}
+
+.tableknife_TABLE .sortCol[activeSort="asc"]::after {
+	content:"\25B3";
+	color:green;
+}
+.tableknife_TABLE .sortCol[activeSort="desc"]::after {
+	content:"\25BD";
+	color:green;
+}
+

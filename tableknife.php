@@ -14,7 +14,7 @@ if (!function_exists('array_key_first')) {
 
 trait multi_col
 {
-    function col_names()
+    function col_names(): string
 
     {
         $cols = array();
@@ -27,30 +27,77 @@ trait multi_col
         return implode(' ',$cols);
         
     }
-    function make_title(string $title):string {
-        return sprintf('<div class="split_column" %2$s>%1$s</div>',$title,static::col_names());
+    function inner_title(string $title):string 
+    {
+        return sprintf('<div class="split_column" %2$s>%1$s</div>', $title,static::col_names());
     }
 }
 
 trait split_title
 {
-  function make_title(string $title):string
+    function inner_title(string $title):string 
     {
-        return sprintf('<div class="alt_column" alt="%1$s">%2$s</div>',$title,str_replace(' ','<br />',$title));
+        return sprintf('<div class="alt_column" alt="%2$s">%1$s</div>',$title,str_replace(' ','<br />',$title));
     }
 }
 
-class rfield_split extends rfield_db
+class TableKnifeFieldException extends \Exception {  }
+class TableKnifeConstructionException extends \Exception {     }
+
+trait tkLoaders
 {
-    use split_title;
+    static function safeLoad(array $a, string $key)
+    {
+
+        if (array_key_exists($key,$a)) { return $a[$key]; } 
+        else {
+            throw new TableKnifeFieldException('Key not set!');
+        }
+    }
+    
+    static function safeLoadInt(array $a, string $key): int
+    {
+        return intval(static::safeLoad($a, $key));
+    }
+    
+    static function lazyLoad(array $a, string $key, $alt = '')
+    {
+        if (!array_key_exists($key,$a)) { return $alt; }
+        return $a[$key];
+    }
+    
+    function lazyLoadInt(array $a, string $key, int $alt = 0): int
+    {
+        if (!array_key_exists($key,$a)) { return intval($alt); }
+        return intval($a[$key]);
+    }
+    
+    function safeLoadSource(array $a)
+    {
+        return static::safeLoad($a, $this->source);
+    }
+    
+    function lazyLoadSource(array $a)
+    {
+        return static::lazyLoad($a, $this->source);
+    }
+    
+    function setLoad(array $a, string $key, string $val = '')
+    {
+        if (!isset($a[$key] )) { $a[$key] = $val; }
+        return static::safeLoad($a, $key);
+    }
 }
 
 abstract class rfield {
+    use tkLoaders;
 	protected $source;
 	public $special = false;
+	public $colParams = array();
 	function __construct($source = null) {
 		$this->source = $source;
 	}
+
 	
 	function ctype():string
 	{
@@ -68,18 +115,27 @@ abstract class rfield {
 	function make_delimiter($row,$col,$special = ''):string 
 	{
 	    return sprintf('<td %1$s >',$special );
-
+	}
+	
+	
+	function handle_title_delimiter(string $pre): string
+	{
+	    return sprintf($pre, implode (' ', $this->colParams));
 	}
 
-	function make_title(string $title):string
+	function inner_title(string $title):string
 	{
-		return $title;	
+	    return $title;
+	}
+	
+	function make_title(string $pre, string $title, string $post):string
+	{
+		return $this->handle_title_delimiter($pre) . $this->inner_title($title) . $post;	
 	}
 	
 	function post_process():void
 	{
 	}
-	
 	
 	public static function make(  $source,string  $type = 'db'): rfield {
 	    
@@ -92,10 +148,15 @@ abstract class rfield {
 	        case 'sum': 	return new rfield_sum (  $source );
 	        case 'split':   return new rfield_split($source);
 	    }
-	    
+	    throw new TableKnifeConstructionException(sprintf('Invalid type "%1$s" in %2$s' ,$type, static::class));
 	}
 }
 
+class rfield_db extends rfield {
+    function process(array &$row):string {
+        return (string) $this->safeLoadSource($row);
+    }
+}
 
 class color_coded_field extends rfield {
 	public $color;
@@ -108,11 +169,16 @@ class color_coded_field extends rfield {
 	
 	function process(array &$row):string
 	{
-		$value = $row[$this->source];
+		$value = static::safeLoadSource($row);
 		if ($value > 0) {
 		    return sprintf('<div style="background-color:%1$s;color:#fff">%2$s</div>',$this->color, $value);
 		} else  { return $value; }
 	}
+}
+
+class rfield_split extends rfield_db
+{
+    use split_title;
 }
 
 class rfield_fixed extends rfield 
@@ -135,7 +201,7 @@ class rfield_dec extends rfield_db
 		$this->decimals = $decimals;
 	}
 	function process(array &$row):string {
-		return number_format ( $row [$this->source], $this->decimals );
+		return number_format ( static::safeLoadSource($row), $this->decimals );
 	}
 }
 
@@ -149,27 +215,22 @@ class rfield_rank extends rfield {
 
 	function process(array &$row):string
 	{
-	    static::$rank_values[$row['row_number']] = $row[$this->source];
-		return sprintf('<div id="row_rank_%1$u">&nbsp;</div>',$row['row_number']);
+	    $rn = static::safeLoad($row,'row_number');
+	    static::$rank_values[$rn] = $this->safeLoadSource($row);
+		return sprintf('<div id="row_rank_%1$u" class="row_rank_field" row_number="%1$u" >&nbsp;</div>',$rn);
 	}
 	
 	function post_process():void
 	{
 		arsort(static::$rank_values);
 		$rank = 0;
-		echo '<script type="text/javscript">';
+		$rankData = array();
 		foreach (static::$rank_values as $key => $sequence)
 		{
 			$rank++;
-			echo '$("#row_rank_' . $key . '").html("' . $rank . '")';
+			$rankData[$key] = $rank;
 		}
-		echo '</script>';
-	}
-}
-
-class rfield_db extends rfield {
-	function process(array &$row):string {
-		return (string) $row [$this->source];
+        echo sprintf('<script class="rank_data" type="application/json">%1$s</script>',json_encode($rankData));
 	}
 }
 
@@ -220,14 +281,13 @@ trait diff_set
     }
 }
 
-
-
 class rfield_concat extends rfield_db
 {
     protected $base_class = 'rfc';
         
-    function make_piece(array $parts)
+    function make_piece(array $raw_parts):string
     {
+        $parts = array_filter(array_map('trim', $raw_parts));
         switch (sizeof($parts)) {
             case 3:   return sprintf('<div class="%4$s_DIV %4$sm_DIV" instance="%1$u">%2$s<div class="%4$sm_explain">%3$s</div></div>',$parts[1],$parts[0],$parts[2],$this->base_class); break;
             case 2:   return sprintf('<div class="%3$s_DIV" instance="%1$u">%2$s</div>',$parts[1],$parts[0],$this->base_class); break;
@@ -238,7 +298,7 @@ class rfield_concat extends rfield_db
     
     function process(array &$row):string
     {
-        $values = explode(',',$row[$this->source]);
+        $values = explode(',',$this->safeLoadSource($row));
         $plist = array();
         $pcounter = 0;
         foreach ($values as $value)
@@ -290,18 +350,18 @@ class rfield_numeric extends rfield_db
 {
     use rfield_analytics;
 	protected $type  = 'numeric';
+	public $colParams = array('sort="numeric"');
 	
 	function process(array &$row):string
 	{
-		return (string) $this->save_value($row [$this->source]);
+		return (string) $this->save_value($this->safeLoadSource($row));
 	}
 			
 	function ar_show(string $label, string $value)
 	{
 	    echo sprintf('<tr><td>%1$s</td><td>%2$s</td></tr>',$label,$value);
 	    $this->analysis_count++;
-	}
-	
+	}	
 }
 
 class rfield_numeric_s extends rfield_numeric
@@ -317,8 +377,7 @@ class rfield_sum extends rfield_numeric {
 	function process(array &$row):string {
 		$value = 0;
 		foreach ( $this->source as $element ) {
-			
-			$value = $value + $row [$element];
+			$value = $value + $this->safeLoad($row, $element);
 		}
 		return $this->save_value($value);
 	}
@@ -346,6 +405,7 @@ class rfield_calc extends rfield_numeric {
 		if ($operator == '*') {   return $this->save_value($val1 * $val2);    }
 		if ($operator == '-') {   return $this->save_value(($val1 - $val2));  }
 		if ($operator == '+') {   return $this->save_value($val2 + $val1);    }	
+		throw new TableKnifeFieldException('Invalid operator  in '. static::class);
 	}
 }
 
@@ -359,7 +419,7 @@ class rfield_date_color extends rfield_date
     protected $type = 'date';
     public $base_date;    
     
-    function smake(string $source, string $base_date)
+    function smake(string $source, string $base_date): rfield_date_color
     {
         $x = new self($source);
         $x->base_date = $base_date;
@@ -369,12 +429,12 @@ class rfield_date_color extends rfield_date
     function process(array &$row):string
     {
         $date_class = '';
-        if ($row[$this->source] > $this->base_date) { $date_class = 'future_date';  }
-        if ($row[$this->source] < $this->base_date) { $date_class = 'past_date';  }
-        return sprintf('<div class="%2$s">%1$s</div>',$row[$this->source],$date_class);
+        $cmpDate = $this->safeLoadSource($row);
+        if ($cmpDate > $this->base_date) { $date_class = 'future_date';  }
+        if ($cmpDate < $this->base_date) { $date_class = 'past_date';  }
+        return sprintf('<div class="%2$s">%1$s</div>',$cmpDate,$date_class);
     }
 }
-
 
 class rfield_link extends rfield {
 	protected $type = 'link';
@@ -382,18 +442,20 @@ class rfield_link extends rfield {
 	protected $else = 'N/A';
 	
 	
-	function __construct($source,$link = '<a href="%s">Link</a>',$else = 'N/A')
+	function __construct($source,$link = '<a href="%s">Link</a>',$else = false)
 	{
 	    parent::__construct($source);
 	    if ($link != '')
 	    {
 	        $this->text = $link;
 	    }
-	    $this->else  = $else;
+	    if ($else) {
+	       $this->else  = $else;
+	    }
 	}
 	
 	function make_link(&$row, $text):string {
-		return sprintf ( $text, $row [$this->source] );
+		return sprintf ( $text, $this->safeLoadSource($row));
 	}
 	function process(array &$row):string {
 		return $this->make_link ( $row, $this->text );
@@ -407,10 +469,12 @@ class rfield_link extends rfield {
 
 class rfield_link_else extends rfield_link
 {
+    public $colParams = array('sort="none"');
+    
     function process(array &$row):string  {
         if (isset($this->source)) {
             if ($row[$this->source] != '') {
-                return sprintf ( $this->text, $row [$this->source] );
+                return $this->make_link ( $row, $this->text );
             }
         }
         return $this->else;
@@ -419,6 +483,7 @@ class rfield_link_else extends rfield_link
 
 class rfield_options extends rfield_link {
 	protected $type = 'option_box';
+	public $colParams = array('sort="none"');
 	public $options = array ();
 	function process(array &$row):string {
 		$returns = array();
@@ -438,6 +503,7 @@ class filter {
 
 
 class report {
+    use tkLoaders;
 	public static $report_count = 0;
 	public static $rt_js = false;
 	
@@ -446,7 +512,7 @@ class report {
 	public $special_predelimeter = "";
 	public $delimiter = "\t";
 	public $row_predelimiter = "";
-	public $special_delimits = array( 0 => array('predelimeter' => '' , 'postdelimiter' =='' ,'postcol' => '','precol' => '') );
+	public $special_delimits = array( 0 => array('predelimeter' => '' , 'postdelimiter' =>'' ,'postcol' => '','precol' => '') );
 	public $row_delimiter = "\n";
 	public $filename, $mode, $blank_text;
 	public $row_count = 0;
@@ -604,7 +670,11 @@ class report {
 	{
 		echo $this->delimits[0]['prerow'];
 		foreach ( $this->columns as $title => $col ) {
-			echo $this->delimits[0]['precol'] .  $col->make_title($title) . $this->delimits[0]['postcol'];
+			echo $col->make_title(
+			    $this->delimits[0]['precol'] ,
+			    $title,
+			    $this->delimits[0]['postcol']
+			    );
 		}
 		echo $this->delimits[0]['postrow'];
 		
@@ -614,15 +684,24 @@ class report {
 	 * this delimits the beginning of a row
 	 */
 	
-	function row_delimit(array $row):string
+	function row_delimit(array $iRow):string
 	{
        return sprintf($this->row_predelimiter,$this->row_count,2-($this->row_count %2));
     }   
 	
-    function rowCalculate(array $row): void
+    function rowCalculate(array $iRow): void
     {
         return ;
     }
+    
+    /**
+     * this fetches the next row -- initially assuming we're working with mysqli_result
+     */
+    function fetchNext($rows_query)
+    {
+        return mysqli_fetch_assoc($rows_query);
+    }
+    
     
 	/*
 	 * this function produces the data rows
@@ -633,7 +712,7 @@ class report {
 	    }
 	    
 	    if (!$rows_query) { return; }
-		while ( $row = mysqli_fetch_assoc ( $rows_query ) ) {
+		while ( $row = static::fetchNext ( $rows_query ) ) {
 			$row['row_number'] = $this->row_count;
 			if ($filter->skip_row($row)) { continue; }
 			$this->rowCalculate($row);
@@ -748,7 +827,7 @@ class report_web extends report {
     {
         parent::__construct($columns,$blank_message,'</td>','</tr>');
         $this->predelimiter = '<td>';
-        $this->delimits = array( 0 => array('prerow' => '<thead><tr class="header_TR">' , 'postrow' => '</tr></thead>' , 'precol' => '<th>' ,'postcol' => '</th>') );
+        $this->delimits = array( 0 => array('prerow' => '<thead><tr class="header_TR">' , 'postrow' => '</tr></thead>' , 'precol' => '<th %1$s >' ,'postcol' => '</th>') );
         $this->row_predelimiter = '<tr class="report_R%2$u" id="row_' . $this->get_report_id() . '_%1$d">';
     }
     

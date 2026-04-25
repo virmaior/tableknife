@@ -3,6 +3,9 @@ class tn_grandpa
 	me;
 	context = "";
 	url = "";
+	/**
+	 * this is helper function to provide a referenec back to actual object based on how this works in JavaScript
+	 */
 	set_me(x)
 	{
 		this.log(' me set');
@@ -126,7 +129,6 @@ class tn_dad extends tn_grandpa
 		bindInput(sel,f,clearBind,onlyOnce)
 		{
 			this.binderFunction(document,sel,"input",f,clearBind,onlyOnce);
-
 		}
 			
 		/**
@@ -135,9 +137,7 @@ class tn_dad extends tn_grandpa
 		getAction(t)
 		{
 			return t.getAttribute('action');
-		}
-
-		
+		}		
 }
 
 class TableKnife extends tn_dad {
@@ -147,7 +147,10 @@ class TableKnife extends tn_dad {
 	columns = [];
 	context="tableknife"
 	
-	
+	/**
+	 * @param {number} report_id 
+	 * @param {*} rt_manager }
+	 */
 	constructor(report_id, rt_manager)
 	{
 		super();
@@ -157,16 +160,15 @@ class TableKnife extends tn_dad {
 		this.rt_id = report_id;
 		this.bind();
 	}
-	
-	first_hide() 
+
+	cookieHide()
 	{
 		const ho = super.get_me();
-
-		if (ho.csp === null) { ho.log("no hide columns in " + ho.rt_id);  return false; }
-		
 		const my_string = ho.manager.readCookie('rt_' + ho.rt_id);
+
 		if (my_string == null) { return false; }
 		if (my_string == '') { return false; }
+
 		ho.columns = my_string.split(',');
 		for (let col_id in ho.columns) {
 			let parts = col_id.split("=")
@@ -176,20 +178,28 @@ class TableKnife extends tn_dad {
 		 		ho.setColumn(1, parts[0], 'hide');
 			}
 		}
-
+	}	
+	first_hide() 
+	{
+		const ho = super.get_me();
+		
+		if (ho.csp === null) { ho.log("no hide columns in " + ho.rt_id);  return false; }
+		
+		ho.cookieHide();
 		const topDIV =  ho.csp.querySelector('.csp_top_DIV');
 		const ctypes = topDIV.getAttribute('ctypes').split(',');
 		const hidden_ctypes = topDIV.getAttribute('hidden_ctypes').split(',');
 		let top_divs = [];
 		ctypes.forEach( ctype => {
 			if (ctype == 'tableknife\\rfield_db') { return false; }
+
 			let my_state = 'show';
 			if (hidden_ctypes.indexOf(ctype) != -1) { my_state = 'hide'; }
 			top_divs.push('<div class="csp_show_ctype" ctype="' + ctype + '" state="' + my_state + '"> ' + ctype + '</div>');
 			ho.csp.querySelectorAll('.csp_column_DIV[ctype=' + ctype + ']').forEach( el => {  el.setAttribute('state',my_state); });
 
 		});
-		topDIV.innerHTML = top_divs.join('');
+		topDIV.innerHTML = top_divs.join('') + '<div class="csp_show_all">Show All</div>';
 		
 		//expand the ctypes onto each TD and to the analysis rows if existent
 		ho.rtObj.querySelectorAll('.header_TR TD > div, .header_TR TH > div').forEach(( div) => {
@@ -221,7 +231,7 @@ class TableKnife extends tn_dad {
 	colState(col_id,state)
 	{
 		this.rtObj.gridSet = 'broken';
-		this.rtObj.querySelectorAll(`td:nth-child(${col_id}) , td:nth-child(${col_id})`).forEach( td => { td.setAttribute('state',state); });
+		this.rtObj.querySelectorAll(`td:nth-child(${col_id}) , th:nth-child(${col_id})`).forEach( td => { td.setAttribute('state',state); });
 	}
 	
 	setColumn(col_id, myState) 
@@ -304,7 +314,35 @@ class TableKnife extends tn_dad {
 			ho.ctypeState(ctype,myState);
 		});
 	}
+	
+	sortTable(e)
+	{
+		const ho = super.get_me();
+		const t = e.currentTarget;
+		e.preventDefault();
+		const col = t.getAttribute('col');				
+		const sortType = t.getAttribute('sort') || 'alpha';
+	
+		const current = t.getAttribute('activeSort');
+		const dir = current === 'asc' ? 'desc' : 'asc';
+		const dirInt = dir === 'asc' ? 1 : -1;
+		ho.rtObj.querySelectorAll('.sortCol[activeSort]').forEach(el => el.removeAttribute('activeSort'));
+		t.setAttribute('activeSort', dir);
+		const rows = Array.from(ho.tbody.querySelectorAll(':scope > tr'));
 
+		const decipherCell = (tr) => {
+				const cell = tr.querySelector(`:scope > td[col="${col}"], :scope > th[col="${col}"]`);
+				return cell ? cell.textContent.trim() : '';
+		};
+
+		const cmp = ho.manager.loadSorter(sortType);
+		rows.sort((a, b) => cmp(a, b, decipherCell) * dirInt);
+		rows.forEach(tr => ho.tbody.appendChild(tr));
+
+		ho.analysisRows.forEach(tr => ho.tbody.appendChild(tr));
+		ho.rtObj.gridSet = 'broken';			
+
+	}
 	bind() 
 	{
 		const ho = super.get_me();
@@ -313,22 +351,33 @@ class TableKnife extends tn_dad {
 		ho.csp = document.querySelector('.csp_DIV[report_id="' + ho.rt_id + '"]');
 		ho.dsr = document.querySelector('.dsr_outer[rt_id="' + ho.rt_id + '"]');
 		
+		ho.tbody = ho.rtObj.querySelector('tbody') || ho.rtObj; //limit to just using the TBODY section (not THEAD or TFOOTER)
+		ho.analysisRows = ho.tbody.querySelectorAll(':scope > tr.analysis_TR');
+		
 		let row = 0;
-		ho.rtObj.querySelectorAll('tbody > tr , thead > tr').forEach(tr => {
+		ho.rtObj.querySelectorAll(':scope > tbody > tr , :scope > thead > tr').forEach(tr => {
 		    row++;
 		    tr.setAttribute('arow', row);
 		    let col = 0;
-		    tr.querySelectorAll('td , th').forEach(td => {
+			
+		    tr.querySelectorAll(':scope > td ,:scope > th').forEach(td => {
 		        col++;
 		        td.setAttribute('row', row);
 		        td.setAttribute('col', col);
 		        td.setAttribute('cella', ho.make_column_letter(col) + row);
+				if (row === 1 ) {
+					if (td.hasAttribute('nopaste')) { return false; }
+					const sortType = td.getAttribute('sort');
+					if (sortType !== 'none') {
+						td.classList.add('sortCol');
+					}
+				}
 		    });
 		});
-
+		ho.bindClickTarget(ho.rtObj, '.sortCol', (e) => ho.sortTable(e));
+		
 		ho.first_hide();
 		if (ho.csp) { ho.cspBind(); }
-
 		
 		if (ho.rtObj.querySelector('.rank_TD')) {
 			ho.rank_column();
@@ -348,7 +397,7 @@ class TableKnife extends tn_dad {
 		});
 		
 		if (!ho.dsr)  {
-			console.log('exiting out due to no dsr set' + ho.rt_id);
+			ho.log('exiting out due to no dsr set' + ho.rt_id);
 			return false; 
 		}
 		ho.binderFunction(ho.dsr,'.rt_view_SELECT[report_id="' + ho.rt_id + '"]','change', (e) => {
@@ -367,7 +416,7 @@ class TableKnife extends tn_dad {
 			switch (pasteType) {
 				case 'XLS': ho.paste_xls(); break;
 				case 'G': ho.paste_g(); break;
-				case 'TSV': ho.save_tsv(); break;
+				case 'TSV': ho.saveTSV(); break;
 			}
 			ho.dsr.setAttribute('state','done');
 
@@ -454,7 +503,7 @@ class TableKnife extends tn_dad {
 						break;
 					case '-':
 					case '+': var yletter = ho.make_column_letter(y - parts[3]); break;
-					default: console.log('unknown parse action ' + action + ' in fmla');
+					default: ho.log('unknown parse action ' + action + ' in fmla');
 
 				}
 				fmla = fmla.split(instruction).join(yletter);
@@ -579,7 +628,7 @@ class TableKnife extends tn_dad {
 		ho.log('pasted to clipboard in Sheets mode: ' + output);
 		navigator.clipboard.writeText(output);
 	}
-	save_tsv() {
+	buildTSV() {
 		const ho = super.get_me();
 		let o_trs = [];
 		const z = document.createElement('div');
@@ -595,13 +644,15 @@ class TableKnife extends tn_dad {
 		            me = " ";
 		        }
 		        o_tds.push(`${me}`);
-				console.log(me);
 		    });
 		    o_trs.push(o_tds.join(','));
 		});
-		
-		var output = o_trs.join(String.fromCharCode(13) + String.fromCharCode(10));
-		console.log(output);
+
+		return o_trs.join(String.fromCharCode(13) + String.fromCharCode(10));	
+	}
+	saveTSV() {
+		const ho = super.get_me();
+		const output = ho.buildTSV();
 		const blob = new Blob([
 			new Uint8Array([0xEF, 0xBB, 0xBF]), // UTF-8 BOM
 			output
@@ -662,6 +713,11 @@ class TableKnife extends tn_dad {
 var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 	tts: [],
 	report_id: 100,
+	sorters: {
+		alpha: (a, b, val) => { return  val(a).localeCompare(val(b), undefined, { sensitivity: 'base' }) } ,
+		currency : (a, b, val) => {  return parseFloat(val(a).replace(/[^0-9.-]/g, '')) - parseFloat(val(b).replace(/[^0-9.-]/g, '')); },
+		numeric: (a, b, val) => { return	parseFloat(val(a)) - parseFloat(val(b)); }
+	},
 	createCookie: function(name, value, days) {
 		var expires = "";
 		if (days) {
@@ -671,6 +727,9 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 		}
 		document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value) + expires + "; path=/";
 	},
+	/**
+	 * @param {string} name
+	 */
 	readCookie: function(name) {
 		var nameEQ = encodeURIComponent(name) + "=";
 		var ca = document.cookie.split(';');
@@ -681,15 +740,30 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 		}
 		return null;
 	},
+	/**
+	 * @returns {integer} 
+	 **/
 	up_id: function() {
 		return this.report_id++;
 	},
+	loadSorter(sortType) {
+		if (sortType in this.sorters) { return this.sorters[sortType]; }
+		return this.sorters.alpha;	
+	},
 	h_id: 0,
+	/**
+	 * @returns {integer} 
+	 **/
 	new_h_id() {
 		this.h_id++;
 		return this.h_id;
 
 	},
+	/**
+	 * @param me
+	 * @param {HTMLElement} ptd
+	 * @param {integer}h_id 
+	 */
 	hovers: {
 		"val": function(me, ptd, h_id) { return ' >' + ptd.getAttribute('fmla'); },
 		"fmla": function(me, ptd, h_id) {
@@ -699,6 +773,24 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 			return ' >' + fmla;
 		}
 	},
+	/**
+	 * @param {HTMLTableElement} table 
+	 */
+	rank(table)
+	{
+		const ranks =  table.querySelector('.rank_data');
+		if (!ranks) { return false; }
+		
+		const data = JSON.parse(ranks.content.textContent); 
+		Object.entries(data).forEach(([key, value]) => {
+			const rankItem = document.getElementById(`row_rank_${key}`);
+			if (rankItem) { rankItem.innerHTML = value; }
+		});
+
+	},
+	/**
+	 * @param {HTMLElement} ptd
+	 */
 	compose_hoveri: function(ptd) {
 		const h_id = this.new_h_id();
 		const htype = ptd.getAttribute('htype');
@@ -715,12 +807,6 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 
 			const rect2 = hoverDIV.getBoundingClientRect();
 			const overflowRight = rect2.right - window.innerWidth;
-			console.log({
-			  right: rect2.right,
-			  innerWidth: window.innerWidth,
-			  overflowRight
-			});
-
 			if (overflowRight > 0 ) {  hoverDIV.style.left = `-${Math.ceil(overflowRight + 30)}px`;  }
 			});
 		}		
@@ -730,7 +816,6 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 			document.querySelectorAll(`.hoveri_DIV[h_id="${h_id}"]`).forEach(element => element.remove());
 		});
 	},
-
 	initialize: function() {
 		const tables = document.querySelectorAll('.tableknife_TABLE');
 		tables.forEach(table => {
@@ -741,6 +826,7 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 		  }
 		  const y = new TableKnife(reportId, this);
 		  this.tts[reportId] = y;
+		  this.rank(table);
 		});
 
 		//jump to location if we have a jump cookie
@@ -760,4 +846,4 @@ document.addEventListener('DOMContentLoaded', () => {
   document.dispatchEvent(new CustomEvent('tableknifeLoaded', {
     detail: { version: '1.0' }
   }));
-},{once:true});
+	},{once:true});
