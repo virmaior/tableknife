@@ -55,6 +55,35 @@ In general, extend the rfield_db class to do further manipulation to match what 
 Items can also be hovered using a hook to create the hover code.
 (1) In the cell add `class="hoveri" htype="pday" `
 (2) In the JavaScript, add the hover handler:
+## Vanilla:
+```
+document.addEventListener('tableknifeLoaded', () => {
+			// @ts-ignore
+	 		tableknife_manager.hovers['pday'] = function(me,ptd,h_id) {
+			const student_id = ptd.parentElement.getAttribute('student_id');
+			if (student_id == 0) { 
+				console.log('no student id');
+				return false; 
+				
+			}
+			const pieces = ptd.getAttribute('parts')?.split(',') || [];
+
+			const pieceHTML = pieces
+			    .map((value: string) => {
+			        const trimmed = value.trim();
+			        return `<div class="pi_DIV" data-value="${trimmed}">${trimmed}</div>`;
+			    })
+			    .join('');
+
+			const fmla = ptd.getAttribute('fmla') || '';
+
+			return `><div class="pday_summary">${fmla}</div>${pieceHTML}`;
+	};
+
+},{once:true});
+```
+
+## JQuery:
 ```
 $(document).ready(function() {
 	gkpt.h['att'] = new att_help();
