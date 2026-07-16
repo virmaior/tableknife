@@ -8,7 +8,7 @@ class tn_grandpa
 	 */
 	set_me(x)
 	{
-		this.log(' me set');
+		this.log('me set');
 		this.me = x;
 	}
 	get_me()
@@ -18,7 +18,7 @@ class tn_grandpa
 		
 	log(x)	
 	{
-		console.log( this.context + ' - ' + x)
+		console.log( `${this.context} - ${x}`)
 	}
 }
 
@@ -41,7 +41,7 @@ class tn_dad extends tn_grandpa
 		init()
 		{
 			const ho = super.get_me();
-			ho.log('initialized ' + ho.context);
+			ho.log(`initialized ${ho.context}`);
 			ho.bind();
 		}
 		/**
@@ -146,6 +146,7 @@ class TableKnife extends tn_dad {
 	rt_id = 0;
 	columns = [];
 	context="tableknife"
+	max_run_count = 50;
 	
 	/**
 	 * @param {number} report_id 
@@ -164,16 +165,15 @@ class TableKnife extends tn_dad {
 	cookieHide()
 	{
 		const ho = super.get_me();
-		const my_string = ho.manager.readCookie('rt_' + ho.rt_id);
+		const my_string = ho.manager.readCookie(`rt_${ho.rt_id}`);
 
-		if (my_string == null) { return false; }
-		if (my_string == '') { return false; }
+		if (!my_string) { return false; }
 
 		ho.columns = my_string.split(',');
 		for (let col_id in ho.columns) {
 			let parts = col_id.split("=")
 			if (parts[1] == 1) {
-				ho.rtObj.querySelectorAll('tr > td:nth-child(' + parts[0] + ')')
+				ho.rtObj.querySelectorAll(`tr > td:nth-child(${parts[0]})`)
 				         .forEach(td => td.checked = false);		
 		 		ho.setColumn(1, parts[0], 'hide');
 			}
@@ -183,7 +183,7 @@ class TableKnife extends tn_dad {
 	{
 		const ho = super.get_me();
 		
-		if (ho.csp === null) { ho.log("no hide columns in " + ho.rt_id);  return false; }
+		if (!ho.csp) { ho.log(`no hide columns in ${ho.rt_id}`);  return false; }
 		
 		ho.cookieHide();
 		const topDIV =  ho.csp.querySelector('.csp_top_DIV');
@@ -195,11 +195,12 @@ class TableKnife extends tn_dad {
 
 			let my_state = 'show';
 			if (hidden_ctypes.indexOf(ctype) != -1) { my_state = 'hide'; }
-			top_divs.push('<div class="csp_show_ctype" ctype="' + ctype + '" state="' + my_state + '"> ' + ctype + '</div>');
-			ho.csp.querySelectorAll('.csp_column_DIV[ctype=' + ctype + ']').forEach( el => {  el.setAttribute('state',my_state); });
+			top_divs.push(`<div class="csp_show_ctype" ctype="${ctype}" state="${my_state}"> ${ctype}</div>`);
+			ho.csp.querySelectorAll(`.csp_column_DIV[ctype=${ctype}]`).forEach( el => {  el.setAttribute('state',my_state); });
 
 		});
-		topDIV.innerHTML = top_divs.join('') + '<div class="csp_show_all">Show All</div>';
+		top_divs.push('<div class="csp_show_all">Show All</div>');
+		topDIV.innerHTML = top_divs.join('');
 		
 		//expand the ctypes onto each TD and to the analysis rows if existent
 		ho.rtObj.querySelectorAll('.header_TR TD > div, .header_TR TH > div').forEach(( div) => {
@@ -225,7 +226,7 @@ class TableKnife extends tn_dad {
 	ctypeState(item,state)
 	{
 		this.rtObj.gridSet = 'broken';
-		this.rtObj.querySelectorAll('TD[ctype="' + item + '"], TH[ctype="' + item + '"]').forEach(td => { td.setAttribute('state', state); } );
+		this.rtObj.querySelectorAll(`TD[ctype="${item}"], TH[ctype="${item}"]`).forEach(td => { td.setAttribute('state', state); } );
 	}
 
 	colState(col_id,state)
@@ -241,14 +242,14 @@ class TableKnife extends tn_dad {
 		if (myState == 'hide') {
 			myVal = 1;			
 		} 
-		ho.columns[col_id] = col_id + "=" + myVal;
+		ho.columns[col_id] = `${col_id}=${myVal}`;
 		ho.colState(col_id,myState);
-		ho.manager.createCookie('rt_' + ho.rt_id, ho.columns.join());
+		ho.manager.createCookie(`rt_${ho.rt_id}`, ho.columns.join());
 	}
 	show_only_row(row_id) 
 	{
 		const ho = super.get_me();
-		ho.log('showing only row ' + row_id);
+		ho.log(`showing only row ${row_id}`);
 		ho.rtObj.querySelectorAll(`tr[id^="row_${ho.rt_id}"]`).forEach(tr => {
 		    if (tr.id === `row_${ho.rt_id}_${row_id}`) {
 		        tr.classList.remove('hide_ROW');
@@ -347,9 +348,9 @@ class TableKnife extends tn_dad {
 	{
 		const ho = super.get_me();
 		ho.sb();
-		ho.rtObj = document.querySelector('.tableknife_TABLE[report_id="' + ho.rt_id + '"]');
-		ho.csp = document.querySelector('.csp_DIV[report_id="' + ho.rt_id + '"]');
-		ho.dsr = document.querySelector('.dsr_outer[rt_id="' + ho.rt_id + '"]');
+		ho.rtObj = document.querySelector(`.tableknife_TABLE[report_id="${ho.rt_id}"]`);
+		ho.csp = document.querySelector(`.csp_DIV[report_id="${ho.rt_id}"]`);
+		ho.dsr = document.querySelector(`.dsr_outer[rt_id="${ho.rt_id}"]`);
 		
 		ho.tbody = ho.rtObj.querySelector('tbody') || ho.rtObj; //limit to just using the TBODY section (not THEAD or TFOOTER)
 		ho.analysisRows = ho.tbody.querySelectorAll(':scope > tr.analysis_TR');
@@ -396,22 +397,24 @@ class TableKnife extends tn_dad {
 			ho.manager.compose_hoveri(t);
 		});
 		
+		ho.binderFunction(document,`.rt_view_SELECT[report_id="${ho.rt_id}"]`,'change', (e) => {
+		const show_row = e.currentTarget.value;
+		if (show_row > 0) {
+			ho.show_only_row(show_row);
+		}
+		else { ho.show_all_rows(); }
+		});
+		
 		if (!ho.dsr)  {
-			ho.log('exiting out due to no dsr set' + ho.rt_id);
+			ho.log(`exiting out due to no dsr set${ho.rt_id}`);
 			return false; 
 		}
-		ho.binderFunction(ho.dsr,'.rt_view_SELECT[report_id="' + ho.rt_id + '"]','change', (e) => {
-			const show_row = e.currentTarget.value;
-			if (show_row > 0) {
-				ho.show_only_row(show_row);
-			}
-			else { ho.show_all_rows(); }
-		});
+
 
 		ho.bindClickTarget(ho.dsr,'.dsr_button_BOX BUTTON', (e) => {
 			e.preventDefault();
 			const pasteType = e.currentTarget.getAttribute('pastetype');
-			ho.log('click fired on ' + pasteType );
+			ho.log(`click fired on ${pasteType}` );
 			ho.processTable();
 			switch (pasteType) {
 				case 'XLS': ho.paste_xls(); break;
@@ -437,7 +440,6 @@ class TableKnife extends tn_dad {
 
 			document.cookie = `obsjump=${hash}${cookieOptions}`;
 			document.cookie = `${hash}=${selectedText}${cookieOptions}`;
-			
 	
 			ho.rtObj.dispatchEvent(new CustomEvent('rload'));
 		},true,true);
@@ -451,12 +453,12 @@ class TableKnife extends tn_dad {
 		const ho = super.get_me();
 		if (ho.col_names[oval]) { return ho.col_names[oval]; }
 		function upshiftAZ(match, offset) {
-			var shift = 0;
+			let shift = 0;
 			if (offset > 0) { shift = 1; }
 			return String.fromCharCode(match.toUpperCase().charCodeAt(0) + 9 + shift);
 		}
 		function upshift09(match, offset) {
-			var shift = 0;
+			let shift = 0;
 			if (offset > 0) { shift = 1; }
 			return String.fromCharCode(match.charCodeAt(0) + 16 + shift);
 		}
@@ -468,19 +470,19 @@ class TableKnife extends tn_dad {
 
 	process_inner_table(that) 
 	{
-		var pieces = []
+		const pieces = []
 		that.querySelectorAll('TABLE TD').forEach((p)  => { pieces.push(p.textContent); });
 		that.replaceWith(pieces.join(' '));
 	}
 
 	decode_fmla(fmla, y) {
 		const ho = super.get_me();
-		var run_count = 0;
+		let run_count = 0;
 		let action="";
 		while (fmla.indexOf(String.fromCharCode(189)) > -1) {
 			run_count++;
-			var instruction_start = fmla.indexOf(String.fromCharCode(189));
-			var instruction_end = fmla.indexOf(String.fromCharCode(190));
+			const instruction_start = fmla.indexOf(String.fromCharCode(189));
+			let instruction_end = fmla.indexOf(String.fromCharCode(190));
 			if (instruction_end <= -1) {
 				ho.log("invalid magic formula length");
 				return false;
@@ -489,31 +491,32 @@ class TableKnife extends tn_dad {
 			const instruction = fmla.substring(instruction_start, instruction_end);
 			const parts = instruction.split("");
 		
-			ho.log('magic instuction: ' + instruction + ' found. Length = ' + instruction.length + ' (=  ' + (instruction_end - instruction_start) + ') command = ' + parts[0] + ' mode = ' + parts[1] + instruction.substr(3, instruction.length - 4));
+			ho.log(`magic instuction: ${instruction} found. Length = ${instruction.length} (=  ${instruction_end - instruction_start}) command = ${parts[0]} mode = ${parts[1]}${instruction.substr(3, instruction.length - 4)}`);
 			{
+				let yletter = '';
 				action = parts[2];
 				switch (action) {
 					case 'A':
 						//if (x == 21) { ho.log('instruction:' + instruction + ' from ' + fmla); }
 						const target = instruction.substr(3, instruction.length - 4);
 						const targ_bits = target.split('_');
-						const targTD = ho.rtObj.querySelector('TD[row="' + targ_bits[1] + '"][col="' + targ_bits[2] + '"]');
+						const targTD = ho.rtObj.querySelector(`TD[row="${targ_bits[1]}"][col="${targ_bits[2]}"]`);
 						const target_y = targTD.colNum + 1;
-						var yletter = ho.make_column_letter(target_y);
+						yletter = ho.make_column_letter(target_y);
 						break;
 					case '-':
-					case '+': var yletter = ho.make_column_letter(y - parts[3]); break;
-					default: ho.log('unknown parse action ' + action + ' in fmla');
+					case '+': yletter = ho.make_column_letter(y - parts[3]); break;
+					default: ho.log(`unknown parse action ${action} in fmla`);
 
 				}
 				fmla = fmla.split(instruction).join(yletter);
 			}
-			if (run_count > 50) {
-				ho.log('parse loop for fmla. dying due to inability to parse in 50 attempts.');
+			if (run_count > ho.max_run_count) {
+				ho.log(`parse loop for fmla. dying due to inability to parse in ${run_count} attempts.`);
 				return false;
 			}
 		}
-		ho.log("resolved to " + fmla);
+		ho.log(`resolved to ${fmla}`);
 		return fmla;
 	}
 
@@ -522,7 +525,7 @@ class TableKnife extends tn_dad {
 		const fmla = me.getAttribute('fmla');
 		ho.makeGrid(ho.rtObj);
 		const y = me.colNum;
-		ho.log("considering formula " + fmla + " at col " + y);
+		ho.log(`considering formula ${fmla} at col ${y}`);
 		return ho.decode_fmla(fmla, y);
 	}
 
@@ -547,8 +550,8 @@ class TableKnife extends tn_dad {
 	processTable() 
 	{
 		const ho = super.get_me();
-		ho.log("process action fired for rt_id = " + ho.rt_id);
-		if (ho.dsr.getAttribute('state') == 'processing') {
+		ho.log(`process action fired for rt_id = ${ho.rt_id}`);
+		if (ho.dsr.getAttribute('state') === 'processing') {
 			alert('already in progress.');
 			return false;
 		}
@@ -567,10 +570,10 @@ class TableKnife extends tn_dad {
 
 		simplify.querySelectorAll('.split_column').forEach (splitC =>  {
 			const myTD = splitC.parentElement;
-			var afters = [];
+			const afters = [];
 			let newTD = false;
-			var col_count = 1;
-			var next_col;
+			let col_count = 1;
+			let next_col;
 			while ((next_col = splitC.getAttribute('col' + col_count)) !== null) {
 				newTD = document.createElement('td');
 				newTD.innerHTML = next_col;
@@ -581,7 +584,7 @@ class TableKnife extends tn_dad {
 
 
 			if (myTD.getAttribute('row') == 1) {
-				simplify.querySelectorAll('.analysis_TR > TD[col="' + myTD.getAttribute('col') + '"]').forEach(el => {
+				simplify.querySelectorAll(`.analysis_TR > TD[col="${myTD.getAttribute('col')}"]`).forEach(el => {
 				  const fragment = document.createDocumentFragment();
 				  for (let i = 0; i < col_count - 2; i++) {
 				    fragment.appendChild(document.createElement('td'));
@@ -609,12 +612,10 @@ class TableKnife extends tn_dad {
 		const ho = super.get_me();
 		ho.log('pasted to clipboard in XLS mode');
 
-		navigator.clipboard.writeText('<x:Workbook ' +
-			' xmlns="urn:schemas-microsoft-com:office:spreadsheet" ' +
-			' xmlns:o="urn:schemas-microsoft-com:office:office" ' +
-			' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" ' +
-			' xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
-			'><Worksheet ss:Name="Test"><table >' + ho.output + '</table></Worksheet></Workbook>');
+		navigator.clipboard.writeText(`<x:Workbook  
+			xmlns="urn:schemas-microsoft-com:office:spreadsheet"  xmlns:o="urn:schemas-microsoft-com:office:office"  
+			xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"  xmlns:x="urn:schemas-microsoft-com:office:excel" >
+			<Worksheet ss:Name="Test"><table >${ho.output}</table></Worksheet></Workbook>`);
 	}
 	paste_g() {
 		const ho = super.get_me();
@@ -719,22 +720,22 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 		numeric: (a, b, val) => { return	parseFloat(val(a)) - parseFloat(val(b)); }
 	},
 	createCookie: function(name, value, days) {
-		var expires = "";
+		let expires = "";
 		if (days) {
-			var date = new Date();
+			const date = new Date();
 			date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
 			expires = "; expires=" + date.toGMTString();
 		}
-		document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value) + expires + "; path=/";
+		document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}${expires}; path=/`;
 	},
 	/**
 	 * @param {string} name
 	 */
 	readCookie: function(name) {
-		var nameEQ = encodeURIComponent(name) + "=";
-		var ca = document.cookie.split(';');
-		for (var i = 0; i < ca.length; i++) {
-			var c = ca[i];
+		const nameEQ = encodeURIComponent(name) + "=";
+		const ca = document.cookie.split(';');
+		for (let i = 0; i < ca.length; i++) {
+			let c = ca[i];
 			while (c.charAt(0) === ' ') c = c.substring(1, c.length);
 			if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
 		}
@@ -757,7 +758,6 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 	new_h_id() {
 		this.h_id++;
 		return this.h_id;
-
 	},
 	/**
 	 * @param me
@@ -769,7 +769,7 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 		"fmla": function(me, ptd, h_id) {
 			const my_rt = ptd.closest('.tableknife_TABLE');
 			const rt_id = my_rt.getAttribute('report_id');
-			var fmla = me.tts[rt_id].decode_td_fmla(ptd);
+			const fmla = me.tts[rt_id].decode_td_fmla(ptd);
 			return ' >' + fmla;
 		}
 	},
@@ -844,6 +844,6 @@ var tableknife_manager = {		//has to be var or else pagespeed_mod fails
 document.addEventListener('DOMContentLoaded', () => {
   tableknife_manager.initialize();
   document.dispatchEvent(new CustomEvent('tableknifeLoaded', {
-    detail: { version: '1.0' }
+    detail: { version: '1.1' }
   }));
 	},{once:true});
