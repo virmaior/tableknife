@@ -1,12 +1,12 @@
 # tableknife
-Table Knife is a PHP/JQuery tool for making HTML tables that can be style, downloaded, and cut/paste to Google Sheets and XLS
-
+Table Knife is a TypeScript/PHP table management tool for making HTML tables that can be style, downloaded, and cut/paste to Google Sheets and XLS
 
 With vanilla JavaScript, tableknife takes all of the `<TABLE>` elements with `class=tableknife_TABLE` and makes them into table knives.
 
 1. It allows exporting of the TABLE to TSV, Google Sheets-friendly paste, or XLS friendly past
 2. It allows hovering using the class "hoveri"
 3. It allows sorting on the front end using JavaScript with custom sorters
+4. Interface can be expanded by using addInterfaceItem
 
 On the PHP side, tableknife allows the formatting of TABLES based on their incoming data. Each field is rendered via an `rfield` object using the `process(array $row):string` function. The $row is generally a mysqli_fetch_assoc but it can take any sort of array-like data.
 
@@ -58,30 +58,28 @@ Items can also be hovered using a hook to create the hover code.
 ## Vanilla:
 ```
 document.addEventListener('tableknifeLoaded', () => {
-			// @ts-ignore
-	 		tableknife_manager.hovers['pday'] = function(me,ptd,h_id) {
-			const student_id = ptd.parentElement.getAttribute('student_id');
-			if (student_id == 0) { 
-				console.log('no student id');
-				return false; 
-				
-			}
-			const pieces = ptd.getAttribute('parts')?.split(',') || [];
+	window.tkManager.hovers['pday'] = (ptd : tkCellElement, h_id: number) => {
+		const row = ptd.closest('TR');
+        const studentId = Number(row?.querySelector('.student_SLEDGE')?.getAttribute('student_id') ?? '0');
+		if (studentId == 0) {
+			console.log('no student id');
+			return '';
 
-			const pieceHTML = pieces
-			    .map((value: string) => {
-			        const trimmed = value.trim();
-			        return `<div class="pi_DIV" data-value="${trimmed}">${trimmed}</div>`;
-			    })
-			    .join('');
+		}
+		const pieces = ptd.getAttribute('parts')?.split(',') || [];
 
-			const fmla = ptd.getAttribute('fmla') || '';
+		const pieceHTML = pieces
+			.map((value: string) => {
+				const trimmed = value.trim();
+				return `<div class="pi_DIV" data-value="${trimmed}">${trimmed}</div>`;
+			})
+			.join('');
 
-			return `><div class="pday_summary">${fmla}</div>${pieceHTML}`;
+		const fmla = ptd.getAttribute('fmla') || '';
+		return `><div class="pday_summary">${fmla}</div>${pieceHTML}`;
 	};
 
-},{once:true});
-```
+}, { once: true });```
 
 ## JQuery:
 ```
